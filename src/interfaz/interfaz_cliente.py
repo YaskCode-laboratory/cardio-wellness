@@ -1,7 +1,9 @@
 from typing import Any, Optional
 
+
 import tkinter as tk
 from tkinter import ttk
+
 
 from src.controladores.control_autenticacion import (
     ControlAutenticacion,
@@ -173,9 +175,6 @@ class InterfazCliente(tk.Tk):
     def _es_modo_pruebas(self) -> bool:
         """
         Detecta una instancia creada con object.__new__.
-
-        Las pruebas no ejecutan __init__, por tanto no crean
-        atributos de la ventana real como _controladores.
         """
         if "_control_autenticacion" not in self.__dict__:
             return True
@@ -403,14 +402,33 @@ class InterfazCliente(tk.Tk):
             anchor="w",
         )
 
-        self._lbl_rutina_nombre = ttk.Label(
+        frame_encabezado = ttk.Frame(
             pestania_rutina,
-            text="Cargando...",
+        )
+
+        frame_encabezado.pack(
+            fill="x",
+            pady=5,
+        )
+
+        self._lbl_rutina_nombre = ttk.Label(
+            frame_encabezado,
+            text="Cargando rutina...",
         )
 
         self._lbl_rutina_nombre.pack(
+            side="left",
             anchor="w",
-            pady=5,
+        )
+
+        self._btn_actualizar_rutina = ttk.Button(
+            frame_encabezado,
+            text="Actualizar rutina",
+            command=self._actualizar_rutina_activa,
+        )
+
+        self._btn_actualizar_rutina.pack(
+            side="right",
         )
 
         columnas = (
@@ -454,6 +472,12 @@ class InterfazCliente(tk.Tk):
         )
 
         self._cargar_datos_rutina()
+
+        if not self._es_modo_pruebas():
+            self.after(
+                5000,
+                self._actualizar_rutina_automaticamente,
+            )
 
     def consultarProgreso(self) -> None:
         """
@@ -599,11 +623,46 @@ class InterfazCliente(tk.Tk):
 
         app.mainloop()
 
-    def _cargar_datos_rutina(self) -> None:
+    def _actualizar_rutina_activa(self) -> None:
         """
-        Carga la rutina activa y sus ejercicios.
+        Recarga los ejercicios de la asignación activa
+        sin cerrar sesión ni cambiar de pestaña.
+        """
+        self._cargar_datos_rutina()
+
+    def _actualizar_rutina_activa(self) -> None:
+        """
+        Recarga manualmente la rutina activa sin cerrar
+        sesión ni cambiar de pestaña.
+        """
+        self._cargar_datos_rutina()
+
+    def _actualizar_rutina_automaticamente(self) -> None:
+        """
+        Consulta nuevamente la rutina activa cada cinco
+        segundos mientras la ventana siga abierta.
         """
         try:
+            if self.winfo_exists():
+                self._cargar_datos_rutina()
+
+                self.after(
+                    5000,
+                    self._actualizar_rutina_automaticamente,
+                )
+
+        except tk.TclError:
+            return
+
+    def _cargar_datos_rutina(self) -> None:
+        """
+        Carga la rutina activa y los ejercicios reales
+        asignados al cliente.
+        """
+        try:
+            for item in self._tree_ejercicios.get_children():
+                self._tree_ejercicios.delete(item)
+
             asignacion = (
                 self._control_rutinas
                 .asignacion_dao
@@ -625,11 +684,24 @@ class InterfazCliente(tk.Tk):
                 asignacion
             )
 
+            id_asignacion = self._obtener_id_asignacion(
+                asignacion
+            )
+
             if id_rutina is None:
                 self._lbl_rutina_nombre.config(
                     text=(
                         "La asignación no contiene "
                         "una rutina válida."
+                    )
+                )
+                return
+
+            if id_asignacion is None:
+                self._lbl_rutina_nombre.config(
+                    text=(
+                        "La asignación activa no contiene "
+                        "un identificador válido."
                     )
                 )
                 return
@@ -640,11 +712,11 @@ class InterfazCliente(tk.Tk):
 
             if rutina is None:
                 self._lbl_rutina_nombre.config(
-                    text="No se encontro la rutina activa."
+                    text="No se encontró la rutina activa."
                 )
                 return
 
-            nombre = getattr(
+            nombre_rutina = getattr(
                 rutina,
                 "nombre",
                 "Sin nombre",
@@ -662,25 +734,26 @@ class InterfazCliente(tk.Tk):
                 str(nivel),
             )
 
-            self._lbl_rutina_nombre.config(
-                text=(
-                    f"Rutina: {nombre} "
-                    f"({nivel_texto})"
+            ejercicios = (
+                self._control_rutinas
+                .obtener_progreso_asignacion(
+                    id_asignacion
                 )
             )
 
-            ejercicios = getattr(
-                rutina,
-                "ejercicios",
-                [],
-            ) or []
+            self._lbl_rutina_nombre.config(
+                text=(
+                    f"Rutina: {nombre_rutina} "
+                    f"({nivel_texto})"
+                )
+            )
 
             if not ejercicios:
                 self._tree_ejercicios.insert(
                     "",
                     "end",
                     values=(
-                        "Sin ejercicios",
+                        "Sin ejercicios activos",
                         "",
                         "",
                         "",
@@ -689,31 +762,29 @@ class InterfazCliente(tk.Tk):
                 return
 
             for ejercicio in ejercicios:
-                nombre_ejercicio = getattr(
-                    ejercicio,
-                    "nombre",
+                nombre_ejercicio = ejercicio.get(
+                    "nombre_ejercicio",
+                    "Sin nombre",
+                )
+
+                tipo = ejercicio.get(
+                    "tipo_ejercicio",
                     "",
                 )
 
-                tipo = getattr(
-                    ejercicio,
-                    "tipo",
-                    "",
+                tipo_texto = getattr(
+                    tipo,
+                    "value",
+                    str(tipo),
                 )
 
-                duracion = getattr(
-                    ejercicio,
+                duracion = ejercicio.get(
                     "duracion_minutos",
-                    getattr(
-                        ejercicio,
-                        "duracion",
-                        "",
-                    ),
+                    "",
                 )
 
-                intensidad = getattr(
-                    ejercicio,
-                    "intensidad",
+                intensidad = ejercicio.get(
+                    "intensidad_ejercicio",
                     "",
                 )
 
@@ -723,13 +794,19 @@ class InterfazCliente(tk.Tk):
                     str(intensidad),
                 )
 
+                duracion_texto = (
+                    f"{duracion} min"
+                    if duracion not in (None, "")
+                    else "-"
+                )
+
                 self._tree_ejercicios.insert(
                     "",
                     "end",
                     values=(
                         nombre_ejercicio,
-                        tipo,
-                        f"{duracion} min",
+                        tipo_texto,
+                        duracion_texto,
                         intensidad_texto,
                     ),
                 )
@@ -812,6 +889,36 @@ class InterfazCliente(tk.Tk):
             valor = getattr(
                 asignacion,
                 "id_rutina",
+                None,
+            )
+
+        if valor is None:
+            return None
+
+        try:
+            return int(valor)
+
+        except (
+            TypeError,
+            ValueError,
+        ):
+            return None
+
+    @staticmethod
+    def _obtener_id_asignacion(
+        asignacion: Any,
+    ) -> Optional[int]:
+        """
+        Obtiene id_asignacion desde objeto o diccionario.
+        """
+        if isinstance(asignacion, dict):
+            valor = asignacion.get(
+                "id_asignacion"
+            )
+        else:
+            valor = getattr(
+                asignacion,
+                "id_asignacion",
                 None,
             )
 

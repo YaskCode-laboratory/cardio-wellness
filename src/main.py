@@ -123,7 +123,11 @@ def inicializar_sistema() -> dict:
         )
 
         control_sesiones = ControlSesiones(
-            sesion_dao
+            sesion_dao=sesion_dao,
+            asignacion_dao=asignacion_dao,
+            asignacion_ejercicio_dao=(
+                control_rutinas.asignacion_ejercicio_dao
+            ),
         )
 
         control_progreso = ControlProgreso(

@@ -3,6 +3,7 @@ Controlador para la gestión de sesiones de entrenamiento.
 """
 
 from src.persistencia.cliente_dao import ClienteDAO
+from src.persistencia.ejercicio_dao import EjercicioDAO
 from src.servicios.calculadora_calorias import (
     CalculadoraCalorias,
 )
@@ -47,6 +48,7 @@ class ControlSesiones(ControlBase):
             AsignacionRutinaEjercicioDAO
         ] = None,
         cliente_dao: Optional[ClienteDAO] = None,
+        ejercicio_dao: Optional[EjercicioDAO] = None,
     ) -> None:
         super().__init__(
             ruta_log=ruta_log,
@@ -74,6 +76,12 @@ class ControlSesiones(ControlBase):
             cliente_dao
             if cliente_dao is not None
             else ClienteDAO()
+        )
+
+        self.ejercicio_dao = (
+            ejercicio_dao
+            if ejercicio_dao is not None
+            else EjercicioDAO()
         )
 
     def registrar_sesion(
@@ -192,17 +200,6 @@ class ControlSesiones(ControlBase):
                 "una sesión."
             )
 
-        intensidad = self._normalizar_intensidad(
-            intensidad_real
-        )
-
-        calorias = (
-            CalculadoraCalorias.calcular_calorias_cardio(
-                peso_kg=peso_cliente,
-                duracion_minutos=duracion_real,
-                intensidad=intensidad,
-            )
-        )
 
         veces_planificadas = self._validar_cantidad(
             veces_planificadas,
@@ -287,7 +284,46 @@ class ControlSesiones(ControlBase):
                     "rutina activa del cliente."
                 )
 
+            ejercicio = self.ejercicio_dao.buscar_por_id(
+                ejercicio_asignado.id_ejercicio
+            )
+
+            if ejercicio is None:
+                raise ValueError(
+                    "No se encontró el ejercicio asociado "
+                    "a la rutina activa."
+                )
+
+            tipo_ejercicio = getattr(
+                ejercicio,
+                "tipo",
+                None,
+            )
+
+            if (
+                not isinstance(tipo_ejercicio, str)
+                or not tipo_ejercicio.strip()
+            ):
+                raise ValueError(
+                    "El ejercicio no tiene un tipo válido "
+                    "para calcular las calorías."
+                )
+
             id_asignacion = asignacion.id_asignacion
+
+        if id_asignacion_ejercicio is None:
+            tipo_ejercicio = "CARDIO"
+
+        intensidad = self._normalizar_intensidad(
+            intensidad_real
+        )
+
+        calorias = CalculadoraCalorias.calcular_calorias(
+            peso_kg=peso_cliente,
+            duracion_minutos=duracion_real,
+            tipo_ejercicio=tipo_ejercicio,
+            intensidad=intensidad,
+        )
 
         sesion = SesionEntrenamiento(
             id_cliente=id_cliente,
