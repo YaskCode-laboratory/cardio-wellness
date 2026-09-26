@@ -25,6 +25,7 @@ def controles():
         "clientes": MagicMock(),
         "rutinas": MagicMock(),
         "ejercicios": MagicMock(),
+        "sesiones": MagicMock(),
     }
 
 
@@ -41,6 +42,7 @@ def crear_ventana_sin_tk(administrador, controles):
     ventana._control_clientes = controles["clientes"]
     ventana._control_rutinas = controles["rutinas"]
     ventana._control_ejercicios = controles["ejercicios"]
+    ventana._control_sesiones = controles["sesiones"]
 
     ventana.title = MagicMock()
     ventana.geometry = MagicMock()
@@ -124,7 +126,10 @@ def test_mostrar_menu_principal_crea_notebook_y_pestanas(
     ) as rutinas_mock, patch.object(
         InterfazAdministrador,
         "abrirGestionEjercicios",
-    ) as ejercicios_mock:
+    ) as ejercicios_mock, patch.object(
+        InterfazAdministrador,
+        "abrirProgresoClientes",
+    ) as progreso_mock:
         ventana.mostrarMenuPrincipal()
 
     frame_mock.assert_called_once_with(
@@ -170,7 +175,7 @@ def test_mostrar_menu_principal_crea_notebook_y_pestanas(
     clientes_mock.assert_called_once_with()
     rutinas_mock.assert_called_once_with()
     ejercicios_mock.assert_called_once_with()
-
+    progreso_mock.assert_called_once_with()
 
 def test_abrir_gestion_clientes(
     ventana,
@@ -678,3 +683,65 @@ def test_cerrar_sesion_modo_real_reutiliza_controladores(
     )
 
     login_mock.return_value.mainloop.assert_called_once_with()
+
+def test_abrir_progreso_clientes(
+    ventana,
+    controles,
+):
+    """
+    Verifica que se cree la pestaña de progreso
+    usando ControlClientes y ControlProgreso.
+    """
+    notebook_mock = MagicMock()
+    control_progreso = MagicMock()
+    pestania_progreso = MagicMock()
+
+    ventana._notebook = notebook_mock
+
+    ventana._controladores = {
+        "control_auth": MagicMock(),
+        "control_clientes": controles["clientes"],
+        "control_rutinas": controles["rutinas"],
+        "control_ejercicios": controles["ejercicios"],
+        "control_progreso": control_progreso,
+    }
+
+    with patch(
+        "src.interfaz.interfaz_administrador."
+        "InterfazProgresoClientesAdmin",
+        return_value=pestania_progreso,
+    ) as mock_interfaz_progreso:
+        ventana.abrirProgresoClientes()
+
+    mock_interfaz_progreso.assert_called_once_with(
+        notebook_mock,
+        controles["clientes"],
+        control_progreso,
+    )
+
+    notebook_mock.add.assert_called_once_with(
+        pestania_progreso,
+        text="Progreso de clientes",
+    )
+
+
+def test_abrir_progreso_clientes_falla_sin_control_progreso(
+    ventana,
+):
+    """
+    Verifica error claro si no existe ControlProgreso
+    dentro del diccionario de controladores.
+    """
+    ventana._notebook = MagicMock()
+
+    ventana._controladores = {
+        "control_auth": MagicMock(),
+    }
+
+    with pytest.raises(RuntimeError) as error:
+        ventana.abrirProgresoClientes()
+
+    assert str(error.value) == (
+        "No se encontró ControlProgreso en "
+        "los controladores del sistema."
+    )

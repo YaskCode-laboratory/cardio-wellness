@@ -184,6 +184,62 @@ class ProgresoMensualDAO:
         except Exception:
             raise
 
+    def buscar_por_cliente_y_mes(
+        self,
+        id_cliente: int,
+        mes: date,
+    ) -> Optional[ProgresoMensual]:
+        """
+        Busca el progreso de un cliente para un mes específico.
+        """
+        self._validar_id(
+            id_cliente,
+            "El ID del cliente",
+        )
+
+        mes_normalizado = self._normalizar_mes(
+            mes
+        )
+
+        self._bd.abrir_conexion()
+
+        try:
+            with self._bd._conexion.cursor(
+                cursor_factory=RealDictCursor
+            ) as cursor:
+                cursor.execute(
+                    """
+                    SELECT
+                        id_progreso,
+                        id_cliente,
+                        mes,
+                        peso,
+                        sesiones_completadas,
+                        sesiones_planificadas,
+                        porcentaje_cumplimiento
+                    FROM progreso_mensual
+                    WHERE id_cliente = %s
+                      AND mes = %s
+                    LIMIT 1
+                    """,
+                    (
+                        id_cliente,
+                        mes_normalizado,
+                    ),
+                )
+
+                fila = cursor.fetchone()
+
+            if fila is None:
+                return None
+
+            return self._crear_progreso_desde_fila(
+                fila
+            )
+
+        except Exception:
+            raise
+
     def buscar_por_cliente(
         self,
         id_cliente: int,

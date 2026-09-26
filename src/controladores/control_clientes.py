@@ -7,12 +7,7 @@ from src.controladores.control_base import ControlBase
 from src.modelos.cliente import Cliente
 from src.persistencia.cliente_dao import ClienteDAO
 from src.servicios.gestor_seguridad import GestorSeguridad
-from src.utilidades.logger import (
-    log_calculo_diferencia_peso,
-    log_consulta_progreso,
-    log_generar_progreso,
-    log_registro_cliente,
-)
+
 
 
 class ControlClientes(ControlBase):
@@ -75,9 +70,7 @@ class ControlClientes(ControlBase):
         Valida la contraseña usada durante el registro.
 
         Requiere como mínimo ocho caracteres, una letra
-        mayúscula, una minúscula y un número. No exige
-        carácter especial, para mantener compatibilidad
-        con Password123 usado por las pruebas.
+        mayúscula, una minúscula y un número.
         """
         if not isinstance(contrasenia, str):
             return False
@@ -344,10 +337,6 @@ class ControlClientes(ControlBase):
     ) -> Cliente:
         """
         Registra un cliente nuevo.
-
-        El parámetro genero tiene un valor predeterminado
-        para mantener compatibilidad con llamadas y pruebas
-        que no lo proporcionan.
         """
         objetivo_texto = (
             objetivo
@@ -406,10 +395,7 @@ class ControlClientes(ControlBase):
             self._registrar_log(
                 cliente_guardado.correo_electronico,
                 "REGISTRO_CLIENTE",
-            )
-
-            log_registro_cliente(
-                cliente_guardado.correo_electronico
+                "Nuevo cliente registrado",
             )
 
             return cliente_guardado
@@ -603,8 +589,7 @@ class ControlClientes(ControlBase):
         """
         Cambia la contraseña de un cliente.
 
-        En cambio de contraseña se conserva la política
-        fuerte implementada en GestorSeguridad.
+        Requiere la contraseña actual del cliente.
         """
         self._validar_id_usuario(id_usuario)
 
@@ -648,6 +633,73 @@ class ControlClientes(ControlBase):
             contrasenia_actual,
             nueva_contrasenia,
         )
+
+    def restablecer_contrasenia_cliente(
+        self,
+        id_usuario: int,
+        nueva_contrasenia: str,
+    ) -> bool:
+        """
+        Restablece la contraseña de un cliente.
+
+        Está destinado al administrador y no requiere
+        conocer la contraseña anterior del cliente.
+        """
+        self._validar_id_usuario(id_usuario)
+
+        if (
+            not isinstance(
+                nueva_contrasenia,
+                str,
+            )
+            or not nueva_contrasenia
+        ):
+            raise ValueError(
+                "La nueva contraseña no puede estar vacía."
+            )
+
+        if not GestorSeguridad.validar_fortaleza_contrasena(
+            nueva_contrasenia
+        ):
+            raise ValueError(
+                (
+                    "La contraseña es muy débil. "
+                    "Debe tener al menos 8 caracteres, "
+                    "una mayúscula, una minúscula y "
+                    "un número."
+                )
+            )
+
+        cliente = self.cliente_dao.buscar_por_id(
+            id_usuario
+        )
+
+        if cliente is None:
+            raise ValueError(
+                "No se encontró el cliente seleccionado."
+            )
+
+        actualizado = (
+            self.cliente_dao.restablecer_contrasenia(
+                id_usuario,
+                nueva_contrasenia,
+            )
+        )
+
+        if actualizado is not True:
+            raise RuntimeError(
+                (
+                    "El sistema no pudo confirmar que "
+                    "la contraseña fue guardada."
+                )
+            )
+
+        self._registrar_log(
+            f"CLIENTE_{id_usuario}",
+            "RESTABLECIMIENTO_CONTRASENIA",
+        )
+
+        return True
 
     def eliminar_cliente(
         self,
@@ -697,10 +749,7 @@ class ControlClientes(ControlBase):
         self._registrar_log(
             f"CLIENTE_{id_cliente}",
             "CONSULTA_PROGRESO",
-        )
-
-        log_consulta_progreso(
-            f"CLIENTE_{id_cliente}"
+            "Cliente consultó su progreso",
         )
 
         return progreso
@@ -734,10 +783,7 @@ class ControlClientes(ControlBase):
         self._registrar_log(
             f"CLIENTE_{id_cliente}",
             "GENERAR_PROGRESO",
-        )
-
-        log_generar_progreso(
-            f"CLIENTE_{id_cliente}"
+            "Se generó reporte de progreso",
         )
 
         return progreso
@@ -772,11 +818,6 @@ class ControlClientes(ControlBase):
             f"CLIENTE_{id_cliente}",
             "CALCULO_DIFERENCIA_PESO",
             f"DIF: {diferencia:.1f}",
-        )
-
-        log_calculo_diferencia_peso(
-            f"CLIENTE_{id_cliente}",
-            diferencia,
         )
 
         return diferencia

@@ -302,6 +302,55 @@ class AsignacionRutinaDAO:
             self._bd._conexion.rollback()
             raise
 
+    def cancelar_asignacion(
+        self,
+        id_asignacion: int,
+    ) -> bool:
+        """
+        Cancela una asignación activa.
+
+        Se usa cuando un administrador reemplaza la rutina
+        del cliente antes de que este complete sus metas.
+        """
+        if (
+            not isinstance(id_asignacion, int)
+            or id_asignacion <= 0
+        ):
+            raise ValueError(
+                "El ID de asignación debe ser positivo."
+            )
+
+        self._bd.abrir_conexion()
+
+        try:
+            with self._bd._conexion.cursor() as cursor:
+                cursor.execute(
+                    """
+                    UPDATE asignaciones_rutina
+                    SET
+                        estado = %s,
+                        fecha_finalizacion = %s
+                    WHERE id_asignacion = %s
+                      AND estado = %s
+                    """,
+                    (
+                        EstadoAsignacion.CANCELADA.value,
+                        date.today(),
+                        id_asignacion,
+                        EstadoAsignacion.ACTIVA.value,
+                    ),
+                )
+
+                actualizado = cursor.rowcount > 0
+
+            self._bd._conexion.commit()
+
+            return actualizado
+
+        except Exception:
+            self._bd._conexion.rollback()
+            raise
+
     def listar_por_cliente(
         self,
         id_cliente: int,

@@ -677,14 +677,17 @@ class ClienteDAO:
             with self._bd._conexion.cursor() as cursor:
                 cursor.execute(
                     """
-                    SELECT contrasenia_hash
-                    FROM usuarios
+                    UPDATE usuarios
+                    SET contrasenia_hash = %s
                     WHERE id_usuario = %s
                       AND LOWER(
                         CAST(tipo_usuario AS TEXT)
-                    ) = 'cliente'
+                      ) = 'cliente'
                     """,
-                    (id_usuario,),
+                    (
+                        nuevo_hash,
+                        id_usuario,
+                    ),
                 )
 
                 fila = cursor.fetchone()
@@ -720,7 +723,7 @@ class ClienteDAO:
                     WHERE id_usuario = %s
                       AND LOWER(
                         CAST(tipo_usuario AS TEXT)
-                    ) = 'cliente'
+                      ) = 'cliente'
                     """,
                     (
                         nuevo_hash,
@@ -734,6 +737,102 @@ class ClienteDAO:
             self._bd._conexion.commit()
 
             return actualizado
+
+        except Exception:
+            self._bd._conexion.rollback()
+            raise
+
+    def restablecer_contrasenia(
+        self,
+        id_usuario: int,
+        nueva_contrasenia: str,
+    ) -> bool:
+        """
+        Restablece la contraseña de un cliente.
+
+        Actualiza las dos columnas existentes de hash para
+        mantener compatibilidad con el sistema actual.
+        """
+        self._validar_id(id_usuario)
+
+        if (
+            not isinstance(
+                nueva_contrasenia,
+                str,
+            )
+            or not nueva_contrasenia
+        ):
+            raise ValueError(
+                "La nueva contraseña no puede estar vacía."
+            )
+
+        if not GestorSeguridad.validar_fortaleza_contrasena(
+            nueva_contrasenia
+        ):
+            raise ValueError(
+                (
+                    "La nueva contraseña es muy débil. "
+                    "Debe tener al menos 8 caracteres, "
+                    "una mayúscula, un número y un "
+                    "carácter especial."
+                )
+            )
+
+        nuevo_hash = GestorSeguridad.generar_hash(
+            nueva_contrasenia
+        )
+
+        self._validar_hash(nuevo_hash)
+
+        self._bd.abrir_conexion()
+
+        try:
+            with self._bd._conexion.cursor() as cursor:
+                cursor.execute(
+                    """
+                    UPDATE usuarios
+                    SET contrasenia_hash = %s
+                    WHERE id_usuario = %s
+                      AND LOWER(
+                        CAST(tipo_usuario AS TEXT)
+                      ) = 'cliente'
+                    RETURNING
+                        id_usuario,
+                        correo_electronico,
+                        contrasenia_hash
+                    """,
+                    (
+                        nuevo_hash,
+                        id_usuario,
+                    ),
+                )
+
+                resultado = cursor.fetchone()
+
+                if resultado is None:
+                    raise ValueError(
+                        (
+                            "No se encontró el cliente "
+                            f"con ID {id_usuario}."
+                        )
+                    )
+
+                hash_guardado = resultado[2]
+
+                if not GestorSeguridad.verificar_contrasenia(
+                    nueva_contrasenia,
+                    hash_guardado,
+                ):
+                    raise RuntimeError(
+                        (
+                            "No se pudo confirmar el hash "
+                            "actualizado del cliente."
+                        )
+                    )
+
+            self._bd._conexion.commit()
+
+            return True
 
         except Exception:
             self._bd._conexion.rollback()

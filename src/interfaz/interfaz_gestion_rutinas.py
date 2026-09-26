@@ -15,10 +15,10 @@ from src.modelos.rutina import Rutina
 
 class InterfazGestionRutinas(InterfazBase):
     """
-    Pestaña de gestión de rutinas.
+    Pestaña para crear y administrar rutinas globales.
 
-    Incluye creación, edición, eliminación, asignación de
-    rutinas y administración de ejercicios asociados.
+    Separa la consulta de ejercicios, edición de datos y
+    gestión de ejercicios para evitar guardados accidentales.
     """
 
     def __init__(
@@ -76,15 +76,13 @@ class InterfazGestionRutinas(InterfazBase):
 
     @property
     def control_rutinas(self) -> ControlRutinas:
-        """
-        Devuelve el controlador de rutinas.
-        """
+        """Devuelve el controlador de rutinas."""
         return self._control_rutinas
 
     def _es_modo_prueba_sin_tk(self) -> bool:
         """
-        Indica si la instancia fue creada por una prueba
-        mediante object.__new__ sin inicializar Tkinter.
+        Detecta instancias creadas mediante object.__new__
+        sin widgets reales de Tkinter.
         """
         return not hasattr(
             self,
@@ -97,14 +95,11 @@ class InterfazGestionRutinas(InterfazBase):
         item_id,
     ) -> tuple:
         """
-        Devuelve los values de un Treeview real o falso.
+        Obtiene values desde Treeview real o falso.
         """
         datos = tree.item(item_id)
 
-        if isinstance(
-            datos,
-            dict,
-        ):
+        if isinstance(datos, dict):
             valores = datos.get(
                 "values",
                 (),
@@ -119,11 +114,11 @@ class InterfazGestionRutinas(InterfazBase):
 
     def mostrarFormularioRutina(self) -> None:
         """
-        Construye el formulario para rutinas.
+        Construye formulario para crear o editar datos.
         """
         form = ttk.LabelFrame(
             self,
-            text="Registrar nueva rutina",
+            text="Gestión de rutina global",
             padding=10,
         )
 
@@ -145,13 +140,13 @@ class InterfazGestionRutinas(InterfazBase):
 
         self._ent_nombre = ttk.Entry(
             form,
-            width=25,
+            width=18,
         )
 
         self._ent_nombre.grid(
             row=0,
             column=1,
-            padx=5,
+            padx=(2, 8),
             pady=3,
         )
 
@@ -162,7 +157,7 @@ class InterfazGestionRutinas(InterfazBase):
             row=0,
             column=2,
             sticky="w",
-            padx=5,
+            padx=(2, 2),
             pady=3,
         )
 
@@ -174,13 +169,13 @@ class InterfazGestionRutinas(InterfazBase):
                 "AVANZADO",
             ),
             state="readonly",
-            width=18,
+            width=14,
         )
 
         self._cb_nivel.grid(
             row=0,
             column=3,
-            padx=5,
+            padx=(2, 5),
             pady=3,
         )
 
@@ -197,13 +192,13 @@ class InterfazGestionRutinas(InterfazBase):
 
         self._ent_descripcion = ttk.Entry(
             form,
-            width=25,
+            width=18,
         )
 
         self._ent_descripcion.grid(
             row=1,
             column=1,
-            padx=5,
+            padx=(2, 8),
             pady=3,
         )
 
@@ -214,19 +209,19 @@ class InterfazGestionRutinas(InterfazBase):
             row=1,
             column=2,
             sticky="w",
-            padx=5,
+            padx=(2, 2),
             pady=3,
         )
 
         self._ent_objetivo = ttk.Entry(
             form,
-            width=25,
+            width=18,
         )
 
         self._ent_objetivo.grid(
             row=1,
             column=3,
-            padx=5,
+            padx=(2, 5),
             pady=3,
         )
 
@@ -272,7 +267,8 @@ class InterfazGestionRutinas(InterfazBase):
 
         botones.grid(
             row=3,
-            column=3,
+            column=2,
+            columnspan=2,
             sticky="e",
             pady=10,
         )
@@ -288,8 +284,27 @@ class InterfazGestionRutinas(InterfazBase):
 
         ttk.Button(
             botones,
-            text="Editar",
+            text="Editar datos",
+            command=self.preparar_edicion_rutina,
+        ).pack(
+            side="left",
+            padx=3,
+        )
+
+        ttk.Button(
+            botones,
+            text="Guardar cambios",
             command=self.editarRutina,
+        ).pack(
+            side="left",
+            padx=3,
+        )
+
+
+        ttk.Button(
+            botones,
+            text="Gestionar ejercicios",
+            command=self.gestionar_ejercicios_rutina,
         ).pack(
             side="left",
             padx=3,
@@ -324,10 +339,7 @@ class InterfazGestionRutinas(InterfazBase):
 
     def mostrarRutinas(self) -> None:
         """
-        Carga las rutinas en la tabla.
-
-        En pruebas reutiliza el widget falso existente.
-        En producción crea y configura el Treeview real.
+        Carga rutinas globales en la tabla principal.
         """
         if self._es_modo_prueba_sin_tk():
             self._mostrar_rutinas_en_prueba()
@@ -361,7 +373,7 @@ class InterfazGestionRutinas(InterfazBase):
             columns=columnas,
             show="headings",
             selectmode="browse",
-            height=8,
+            height=5,
         )
 
         for columna in columnas:
@@ -378,25 +390,25 @@ class InterfazGestionRutinas(InterfazBase):
 
         self._tree.column(
             "Nombre",
-            width=180,
+            width=170,
             anchor="w",
         )
 
         self._tree.column(
             "Descripción",
-            width=280,
+            width=250,
             anchor="w",
         )
 
         self._tree.column(
             "Objetivo",
-            width=180,
+            width=160,
             anchor="w",
         )
 
         self._tree.column(
             "Nivel",
-            width=110,
+            width=100,
             anchor="center",
         )
 
@@ -430,9 +442,7 @@ class InterfazGestionRutinas(InterfazBase):
         try:
             rutinas = self._control_rutinas.listar()
 
-            self._rutinas_disponibles = list(
-                rutinas
-            )
+            self._rutinas_disponibles = list(rutinas)
 
             for rutina in self._rutinas_disponibles:
                 nivel = getattr(
@@ -481,7 +491,7 @@ class InterfazGestionRutinas(InterfazBase):
 
     def _mostrar_rutinas_en_prueba(self) -> None:
         """
-        Carga rutinas usando el Treeview falso de tests.
+        Carga rutinas en Treeview falso de pruebas.
         """
         if not hasattr(
             self,
@@ -495,9 +505,7 @@ class InterfazGestionRutinas(InterfazBase):
 
             rutinas = self._control_rutinas.listar()
 
-            self._rutinas_disponibles = list(
-                rutinas
-            )
+            self._rutinas_disponibles = list(rutinas)
 
             for rutina in self._rutinas_disponibles:
                 nivel = getattr(
@@ -535,11 +543,14 @@ class InterfazGestionRutinas(InterfazBase):
 
     def mostrarEjerciciosRutina(self) -> None:
         """
-        Construye la sección de ejercicios asociados.
+        Construye panel para consultar o gestionar ejercicios.
+
+        Los controles Agregar/Quitar permanecen ocultos hasta
+        que se presiona Gestionar ejercicios.
         """
         self._frame_ejercicios_rutina = ttk.LabelFrame(
             self,
-            text="Ejercicios de la rutina",
+            text="Ejercicios de la rutina global",
             padding=10,
         )
 
@@ -553,10 +564,11 @@ class InterfazGestionRutinas(InterfazBase):
 
         ttk.Label(
             frame,
-            text="Rutina:",
+            text="Rutina consultada:",
         ).grid(
             row=0,
             column=0,
+            sticky="w",
             padx=5,
             pady=5,
         )
@@ -570,6 +582,7 @@ class InterfazGestionRutinas(InterfazBase):
         self._cb_rutina_ejercicios.grid(
             row=0,
             column=1,
+            sticky="w",
             padx=5,
             pady=5,
         )
@@ -579,49 +592,54 @@ class InterfazGestionRutinas(InterfazBase):
             self._cargar_ejercicios_asociados,
         )
 
-        ttk.Label(
+        self._frame_controles_ejercicios = ttk.Frame(
             frame,
-            text="Ejercicio:",
-        ).grid(
+        )
+
+        self._frame_controles_ejercicios.grid(
             row=1,
             column=0,
+            columnspan=4,
+            sticky="w",
             padx=5,
             pady=5,
         )
 
+        ttk.Label(
+            self._frame_controles_ejercicios,
+            text="Ejercicio:",
+        ).pack(
+            side="left",
+            padx=(0, 5),
+        )
+
         self._cb_ejercicio_rutina = ttk.Combobox(
-            frame,
+            self._frame_controles_ejercicios,
             state="readonly",
             width=35,
         )
 
-        self._cb_ejercicio_rutina.grid(
-            row=1,
-            column=1,
+        self._cb_ejercicio_rutina.pack(
+            side="left",
             padx=5,
-            pady=5,
         )
 
         ttk.Button(
-            frame,
+            self._frame_controles_ejercicios,
             text="Agregar ejercicio",
             command=self._agregar_ejercicio_a_rutina,
-        ).grid(
-            row=1,
-            column=2,
+        ).pack(
+            side="left",
             padx=5,
-            pady=5,
         )
 
         ttk.Button(
-            frame,
+            self._frame_controles_ejercicios,
             text="Quitar ejercicio",
             command=self._quitar_ejercicio_de_rutina,
-        ).grid(
-            row=1,
-            column=3,
+        ).pack(
+            side="left",
             padx=5,
-            pady=5,
         )
 
         columnas = (
@@ -658,9 +676,12 @@ class InterfazGestionRutinas(InterfazBase):
             self._seleccionar_ejercicio_por_clic,
         )
 
+        self._frame_controles_ejercicios.grid_remove()
+        frame.pack_forget()
+
     def crearRutina(self) -> None:
         """
-        Crea una rutina con los valores del formulario.
+        Crea una rutina nueva.
         """
         try:
             datos = self._leer_datos_formulario()
@@ -697,10 +718,10 @@ class InterfazGestionRutinas(InterfazBase):
 
             self._limpiar_formulario()
             self.mostrarRutinas()
+            self._ocultar_panel_ejercicios()
 
             if not self._es_modo_prueba_sin_tk():
                 self._cargar_datos_ejercicios()
-                self._limpiar_vista_previa()
 
         except ValueError as error:
             self.mostrar_error(str(error))
@@ -710,12 +731,87 @@ class InterfazGestionRutinas(InterfazBase):
                 f"Error inesperado: {error}"
             )
 
+    def preparar_edicion_rutina(self) -> None:
+        """
+        Carga datos de rutina para editar sin guardar.
+
+        No muestra mensajes de éxito ni modifica base de datos.
+        """
+        id_rutina = self._obtener_id_rutina_tabla()
+
+        if id_rutina is None:
+            self.mostrar_error(
+                "Seleccione una rutina para editar."
+            )
+            return
+
+        if self._es_modo_prueba_sin_tk():
+            self._id_rutina_editando = id_rutina
+            return
+
+        try:
+            rutina = self._control_rutinas.buscar_por_id(
+                id_rutina
+            )
+
+            if rutina is None:
+                raise ValueError(
+                    "No se encontró la rutina."
+                )
+
+            self._id_rutina_editando = id_rutina
+
+            self._ent_nombre.delete(0, tk.END)
+            self._ent_nombre.insert(0, rutina.nombre)
+
+            self._ent_descripcion.delete(0, tk.END)
+            self._ent_descripcion.insert(
+                0,
+                rutina.descripcion,
+            )
+
+            self._ent_objetivo.delete(0, tk.END)
+            self._ent_objetivo.insert(
+                0,
+                rutina.objetivo,
+            )
+
+            nivel = getattr(
+                rutina.nivel,
+                "value",
+                str(rutina.nivel),
+            )
+
+            self._cb_nivel.set(nivel)
+
+            self._ent_duracion.delete(0, tk.END)
+            self._ent_duracion.insert(
+                0,
+                str(rutina.duracion_semanas),
+            )
+
+            self._lbl_modo.config(
+                text=(
+                    "Modo: editando datos de rutina "
+                    f"#{id_rutina}"
+                ),
+                foreground="#174ea6",
+            )
+
+        except Exception as error:
+            self.mostrar_error(
+                (
+                    "No se pudo cargar la rutina "
+                    f"{id_rutina}: {error}"
+                )
+            )
+
     def editarRutina(self) -> None:
         """
-        Edita una rutina seleccionada.
+        Guarda cambios de datos de una rutina.
 
-        En producción conserva la edición completa.
-        En tests mantiene el mensaje esperado por la suite.
+        Solo funciona después de presionar Editar datos.
+        Guardar cambios no muestra ejercicios.
         """
         id_rutina = getattr(
             self,
@@ -724,36 +820,13 @@ class InterfazGestionRutinas(InterfazBase):
         )
 
         if id_rutina is None:
-            seleccion = self._tree.selection()
-
-            if not seleccion:
-                self.mostrar_error(
-                    "Seleccione una rutina para editar."
+            self.mostrar_error(
+                (
+                    "Seleccione una rutina y presione "
+                    "Editar datos antes de guardar."
                 )
-                return
-
-            if self._es_modo_prueba_sin_tk():
-                self.mostrar_mensaje(
-                    (
-                        "Funcionalidad de edicion "
-                        "pendiente de implementar."
-                    )
-                )
-                return
-
-            valores = self._obtener_valores_tree(
-                self._tree,
-                seleccion[0],
             )
-
-            if not valores:
-                self.mostrar_error(
-                    "Seleccione una rutina para editar."
-                )
-                return
-
-            id_rutina = int(valores[0])
-            self._id_rutina_editando = id_rutina
+            return
 
         if self._es_modo_prueba_sin_tk():
             self.mostrar_mensaje(
@@ -807,6 +880,11 @@ class InterfazGestionRutinas(InterfazBase):
                 "Rutina actualizada correctamente."
             )
 
+            self._id_rutina_vista_previa = id_rutina
+            self._id_ejercicio_seleccionado = None
+
+            self._ocultar_panel_ejercicios()
+
             self.mostrarRutinas()
             self._cargar_datos_ejercicios()
 
@@ -817,10 +895,96 @@ class InterfazGestionRutinas(InterfazBase):
             self.mostrar_error(
                 f"Error al editar rutina: {error}"
             )
+    
+    
+    def gestionar_ejercicios_rutina(self) -> None:
+        """
+        Muestra tabla y controles para agregar o quitar
+        ejercicios de la plantilla global.
+        """
+        id_rutina = self._obtener_id_rutina_tabla()
+
+        if id_rutina is None:
+            self.mostrar_error(
+                (
+                    "Seleccione una rutina para gestionar "
+                    "sus ejercicios."
+                )
+            )
+            return
+
+        try:
+            self._tree_frame.pack_forget()
+
+            self._mostrar_panel_ejercicios(
+                id_rutina,
+                permitir_gestion=True,
+            )
+
+        except Exception as error:
+            self.mostrar_error(
+                (
+                    "No se pudieron gestionar los "
+                    f"ejercicios: {error}"
+                )
+            )
+
+    def _mostrar_panel_ejercicios(
+        self,
+        id_rutina: int,
+        permitir_gestion: bool,
+    ) -> None:
+        """
+        Muestra panel de ejercicios en modo consulta o gestión.
+        """
+        rutina = self._control_rutinas.buscar_por_id(
+            id_rutina
+        )
+
+        if rutina is None:
+            raise ValueError(
+                "No se encontró la rutina."
+            )
+
+        self._id_rutina_vista_previa = id_rutina
+        self._id_ejercicio_seleccionado = None
+
+        self._frame_ejercicios_rutina.pack(
+            fill="both",
+            expand=False,
+            pady=5,
+        )
+
+        self._cb_rutina_ejercicios.set(
+            f"{rutina.id_rutina} - {rutina.nombre}"
+        )
+
+        if permitir_gestion:
+            self._frame_controles_ejercicios.grid()
+
+            self._frame_ejercicios_rutina.config(
+                text=(
+                    "Gestionar ejercicios de la "
+                    "rutina global"
+                )
+            )
+        else:
+            self._frame_controles_ejercicios.grid_remove()
+
+            self._frame_ejercicios_rutina.config(
+                text=(
+                    "Ejercicios registrados en la "
+                    "rutina global"
+                )
+            )
+
+        self._mostrar_ejercicios_asociados(
+            id_rutina
+        )
 
     def eliminarRutina(self) -> None:
         """
-        Elimina la rutina seleccionada.
+        Elimina rutina global seleccionada.
         """
         id_rutina = self._obtener_id_rutina_tabla()
 
@@ -860,10 +1024,7 @@ class InterfazGestionRutinas(InterfazBase):
 
             self._limpiar_formulario()
             self.mostrarRutinas()
-
-            if not self._es_modo_prueba_sin_tk():
-                self._cargar_datos_ejercicios()
-                self._limpiar_vista_previa()
+            self._ocultar_panel_ejercicios()
 
         except Exception as error:
             self.mostrar_error(
@@ -872,7 +1033,7 @@ class InterfazGestionRutinas(InterfazBase):
 
     def asignarRutina(self) -> None:
         """
-        Asigna una rutina seleccionada a un cliente.
+        Asigna rutina seleccionada a un cliente.
         """
         id_rutina = self._obtener_id_rutina_tabla()
 
@@ -882,46 +1043,33 @@ class InterfazGestionRutinas(InterfazBase):
             )
             return
 
-        if self._es_modo_prueba_sin_tk():
-            id_cliente = simpledialog.askinteger(
-                "Asignar Rutina",
-                "Ingrese el ID del cliente:",
-                parent=self,
-            )
-        else:
-            id_cliente = simpledialog.askinteger(
-                "Asignar rutina",
-                "Ingrese el ID del cliente:",
-                parent=self,
-                minvalue=1,
-            )
+        id_cliente = simpledialog.askinteger(
+            "Asignar rutina",
+            "Ingrese el ID del cliente:",
+            parent=self,
+            minvalue=1,
+        )
 
         if id_cliente is None:
             return
 
         try:
-            if self._es_modo_prueba_sin_tk():
-                self._control_rutinas.asignar_rutina(
-                    id_cliente=id_cliente,
-                    id_rutina=id_rutina,
-                )
-            else:
-                observaciones = simpledialog.askstring(
-                    "Asignar rutina",
-                    "Observaciones opcionales:",
-                    parent=self,
-                )
+            observaciones = simpledialog.askstring(
+                "Asignar rutina",
+                "Observaciones opcionales:",
+                parent=self,
+            )
 
-                administrador_id = (
-                    self._obtener_id_administrador()
-                )
+            administrador_id = (
+                self._obtener_id_administrador()
+            )
 
-                self._control_rutinas.asignar_rutina(
-                    cliente=id_cliente,
-                    rutina=id_rutina,
-                    asignado_por=administrador_id,
-                    observaciones=observaciones or "",
-                )
+            self._control_rutinas.asignar_rutina(
+                cliente=id_cliente,
+                rutina=id_rutina,
+                asignado_por=administrador_id,
+                observaciones=observaciones or "",
+            )
 
             self.mostrar_mensaje(
                 (
@@ -939,7 +1087,7 @@ class InterfazGestionRutinas(InterfazBase):
         self,
     ) -> Optional[int]:
         """
-        Obtiene el ID de la rutina seleccionada.
+        Obtiene ID de la rutina seleccionada.
         """
         if not hasattr(
             self,
@@ -974,103 +1122,30 @@ class InterfazGestionRutinas(InterfazBase):
         _evento=None,
     ) -> None:
         """
-        Carga la rutina seleccionada para editarla.
+        Guarda selección sin editar, guardar ni mostrar panel.
         """
         id_rutina = self._obtener_id_rutina_tabla()
 
         if id_rutina is None:
             return
 
-        self._id_rutina_editando = id_rutina
         self._id_rutina_vista_previa = id_rutina
-
-        if self._es_modo_prueba_sin_tk():
-            return
-
-        try:
-            rutina = self._control_rutinas.buscar_por_id(
-                id_rutina
-            )
-
-            if rutina is None:
-                raise ValueError(
-                    "No se encontró la rutina."
-                )
-
-            self._ent_nombre.delete(0, tk.END)
-            self._ent_nombre.insert(0, rutina.nombre)
-
-            self._ent_descripcion.delete(0, tk.END)
-            self._ent_descripcion.insert(
-                0,
-                rutina.descripcion,
-            )
-
-            self._ent_objetivo.delete(0, tk.END)
-            self._ent_objetivo.insert(
-                0,
-                rutina.objetivo,
-            )
-
-            nivel = getattr(
-                rutina.nivel,
-                "value",
-                str(rutina.nivel),
-            )
-
-            self._cb_nivel.set(nivel)
-
-            self._ent_duracion.delete(0, tk.END)
-            self._ent_duracion.insert(
-                0,
-                str(rutina.duracion_semanas),
-            )
-
-            self._lbl_modo.config(
-                text=(
-                    "Modo: editando rutina "
-                    f"#{id_rutina}"
-                ),
-                foreground="#174ea6",
-            )
-
-            frame_ejercicios = getattr(
-                self,
-                "_frame_ejercicios_rutina",
-                None,
-            )
-
-            if frame_ejercicios is not None:
-                frame_ejercicios.pack(
-                    fill="both",
-                    expand=True,
-                    pady=5,
-                )
-
-            self._mostrar_ejercicios_asociados(
-                id_rutina
-            )
-
-        except Exception as error:
-            self.mostrar_error(
-                (
-                    f"No se pudo cargar la rutina "
-                    f"{id_rutina}: {error}"
-                )
-            )
+        self._id_ejercicio_seleccionado = None
 
     def _editar_con_doble_click(
         self,
         _evento=None,
     ) -> None:
         """
-        Edita con doble clic.
+        Doble clic carga datos de rutina para editar.
+
+        No guarda cambios.
         """
-        self.editarRutina()
+        self.preparar_edicion_rutina()
 
     def _leer_datos_formulario(self) -> dict:
         """
-        Lee y valida los campos del formulario.
+        Lee y valida campos de rutina.
         """
         nombre = self._ent_nombre.get().strip()
 
@@ -1133,11 +1208,7 @@ class InterfazGestionRutinas(InterfazBase):
 
     def _cancelar_edicion_rutina(self) -> None:
         """
-        Cancela la edición actual y regresa a la lista de rutinas.
-
-        Limpia el formulario, elimina la selección, borra los
-        ejercicios visibles y oculta por completo el panel
-        "Ejercicios de la rutina".
+        Limpia formulario, selección y panel de ejercicios.
         """
         self._id_rutina_editando = None
         self._id_rutina_vista_previa = None
@@ -1157,40 +1228,12 @@ class InterfazGestionRutinas(InterfazBase):
             if seleccion:
                 tree_rutinas.selection_remove(*seleccion)
 
-        combo_rutinas = getattr(
-            self,
-            "_cb_rutina_ejercicios",
-            None,
-        )
-
-        if combo_rutinas is not None:
-            combo_rutinas.set("")
-
-        combo_ejercicios = getattr(
-            self,
-            "_cb_ejercicio_rutina",
-            None,
-        )
-
-        if combo_ejercicios is not None:
-            combo_ejercicios.set("")
-
-        self._limpiar_vista_previa()
-
-        frame_ejercicios = getattr(
-            self,
-            "_frame_ejercicios_rutina",
-            None,
-        )
-
-        if frame_ejercicios is not None:
-            frame_ejercicios.pack_forget()
-
+        self._ocultar_panel_ejercicios()
         self.mostrarRutinas()
 
     def _limpiar_formulario(self) -> None:
         """
-        Limpia los widgets del formulario.
+        Limpia widgets de datos de rutina.
         """
         for atributo in (
             "_ent_nombre",
@@ -1231,6 +1274,39 @@ class InterfazGestionRutinas(InterfazBase):
                 foreground="#555555",
             )
 
+    def _ocultar_panel_ejercicios(self) -> None:
+        """
+        Oculta panel y limpia controles de ejercicios.
+        """
+        combo_rutinas = getattr(
+            self,
+            "_cb_rutina_ejercicios",
+            None,
+        )
+
+        if combo_rutinas is not None:
+            combo_rutinas.set("")
+
+        combo_ejercicios = getattr(
+            self,
+            "_cb_ejercicio_rutina",
+            None,
+        )
+
+        if combo_ejercicios is not None:
+            combo_ejercicios.set("")
+
+        self._limpiar_vista_previa()
+
+        frame = getattr(
+            self,
+            "_frame_ejercicios_rutina",
+            None,
+        )
+
+        if frame is not None:
+            frame.pack_forget()
+
     def _cargar_datos_ejercicios(self) -> None:
         """
         Carga rutinas y ejercicios disponibles.
@@ -1266,7 +1342,7 @@ class InterfazGestionRutinas(InterfazBase):
 
     def _cargar_rutinas_en_combo(self) -> None:
         """
-        Carga las rutinas en el Combobox.
+        Carga rutinas globales en el ComboBox.
         """
         if not hasattr(
             self,
@@ -1287,7 +1363,7 @@ class InterfazGestionRutinas(InterfazBase):
         _evento=None,
     ) -> None:
         """
-        Carga ejercicios de la rutina elegida.
+        Muestra ejercicios de rutina seleccionada en combo.
         """
         try:
             valor = (
@@ -1320,7 +1396,7 @@ class InterfazGestionRutinas(InterfazBase):
         id_rutina: int,
     ) -> None:
         """
-        Muestra ejercicios asociados a una rutina.
+        Inserta ejercicios globales de rutina en la tabla.
         """
         if not hasattr(
             self,
@@ -1370,7 +1446,7 @@ class InterfazGestionRutinas(InterfazBase):
         evento,
     ) -> None:
         """
-        Guarda el ejercicio seleccionado.
+        Guarda ejercicio global seleccionado.
         """
         tree = getattr(
             self,
@@ -1406,12 +1482,10 @@ class InterfazGestionRutinas(InterfazBase):
 
     def _agregar_ejercicio_a_rutina(self) -> None:
         """
-        Agrega un ejercicio a la rutina en vista previa.
+        Agrega ejercicio a plantilla global.
         """
         try:
-            id_rutina = (
-                self._id_rutina_vista_previa
-            )
+            id_rutina = self._id_rutina_vista_previa
 
             if id_rutina is None:
                 raise ValueError(
@@ -1469,16 +1543,11 @@ class InterfazGestionRutinas(InterfazBase):
 
     def _quitar_ejercicio_de_rutina(self) -> None:
         """
-        Quita el ejercicio seleccionado de la rutina.
+        Quita ejercicio de plantilla global.
         """
         try:
-            id_rutina = (
-                self._id_rutina_vista_previa
-            )
-
-            id_ejercicio = (
-                self._id_ejercicio_seleccionado
-            )
+            id_rutina = self._id_rutina_vista_previa
+            id_ejercicio = self._id_ejercicio_seleccionado
 
             if id_rutina is None:
                 raise ValueError(
@@ -1529,7 +1598,7 @@ class InterfazGestionRutinas(InterfazBase):
 
     def _limpiar_vista_previa(self) -> None:
         """
-        Limpia la tabla de ejercicios asociados.
+        Limpia tabla de ejercicios.
         """
         self._id_ejercicio_seleccionado = None
 
@@ -1547,7 +1616,7 @@ class InterfazGestionRutinas(InterfazBase):
 
     def _obtener_id_administrador(self) -> int:
         """
-        Obtiene el ID del administrador autenticado.
+        Obtiene ID del administrador autenticado.
         """
         control_autenticacion = getattr(
             self,

@@ -2,10 +2,13 @@
 DAO para la persistencia de sesiones de entrenamiento.
 """
 
+
 from typing import List, Optional
+
 
 from psycopg2 import IntegrityError
 from psycopg2.extras import RealDictCursor
+
 
 from src.modelos.enums import Intensidad
 from src.modelos.sesion_entrenamiento import (
@@ -23,6 +26,8 @@ class SesionEntrenamientoDAO:
         "id_sesion",
         "id_cliente",
         "id_rutina",
+        "id_asignacion",
+        "id_asignacion_ejercicio",
         "fecha",
         "nombre_ejercicio",
         "duracion_real",
@@ -60,16 +65,22 @@ class SesionEntrenamientoDAO:
                     INSERT INTO sesiones_entrenamiento (
                         id_cliente,
                         id_rutina,
+                        id_asignacion,
+                        id_asignacion_ejercicio,
                         fecha,
                         nombre_ejercicio,
                         duracion_real,
                         intensidad_real,
                         calorias_quemadas,
                         observaciones,
+                        completada,
                         veces_planificadas,
                         veces_realizadas
                     )
                     VALUES (
+                        %s,
+                        %s,
+                        %s,
                         %s,
                         %s,
                         %s,
@@ -85,6 +96,8 @@ class SesionEntrenamientoDAO:
                         id_sesion,
                         id_cliente,
                         id_rutina,
+                        id_asignacion,
+                        id_asignacion_ejercicio,
                         fecha,
                         nombre_ejercicio,
                         duracion_real,
@@ -98,6 +111,8 @@ class SesionEntrenamientoDAO:
                     (
                         sesion.id_cliente,
                         sesion.id_rutina,
+                        sesion.id_asignacion,
+                        sesion.id_asignacion_ejercicio,
                         sesion.fecha,
                         sesion.nombre_ejercicio,
                         sesion.duracion_real,
@@ -106,6 +121,7 @@ class SesionEntrenamientoDAO:
                         ),
                         sesion.calorias_quemadas,
                         sesion.observaciones,
+                        sesion.completada,
                         sesion.veces_planificadas,
                         sesion.veces_realizadas,
                     ),
@@ -140,20 +156,16 @@ class SesionEntrenamientoDAO:
 
             if codigo == "23514":
                 raise ValueError(
-                    (
-                        "Las veces realizadas deben ser "
-                        "mayores o iguales a cero y no "
-                        "pueden superar las planificadas."
-                    )
+                    "Las veces realizadas deben ser "
+                    "mayores o iguales a cero y no "
+                    "pueden superar las planificadas."
                 ) from error
 
             raise ValueError(
-                (
-                    "No se pudo guardar la sesión por "
-                    "una restricción de integridad."
-                )
+                "No se pudo guardar la sesión por "
+                "una restricción de integridad."
             ) from error
-
+        
         except Exception:
             self._bd._conexion.rollback()
             raise
@@ -165,7 +177,7 @@ class SesionEntrenamientoDAO:
         """
         Busca una sesión por ID.
         """
-        id_sesion = self._validar_id(
+        sesion_id = self._validar_id(
             id_sesion,
             "El ID de sesión",
         )
@@ -183,7 +195,7 @@ class SesionEntrenamientoDAO:
                     FROM sesiones_entrenamiento
                     WHERE id_sesion = %s
                     """,
-                    (id_sesion,),
+                    (sesion_id,),
                 )
 
                 fila = cursor.fetchone()
@@ -206,7 +218,7 @@ class SesionEntrenamientoDAO:
         """
         Lista las sesiones de un cliente.
         """
-        id_cliente = self._validar_id(
+        cliente_id = self._validar_id(
             id_cliente,
             "El ID del cliente",
         )
@@ -225,7 +237,7 @@ class SesionEntrenamientoDAO:
                     WHERE id_cliente = %s
                     ORDER BY fecha DESC, id_sesion DESC
                     """,
-                    (id_cliente,),
+                    (cliente_id,),
                 )
 
                 filas = cursor.fetchall()
@@ -242,11 +254,9 @@ class SesionEntrenamientoDAO:
 
                 except Exception as error:
                     raise RuntimeError(
-                        (
-                            "Error al convertir la sesión "
-                            f"recibida: {dict(fila)!r}. "
-                            f"Causa: {error}"
-                        )
+                        "Error al convertir la sesión "
+                        f"recibida: {dict(fila)!r}. "
+                        f"Causa: {error}"
                     ) from error
 
             return sesiones
@@ -278,10 +288,8 @@ class SesionEntrenamientoDAO:
             SesionEntrenamiento,
         ):
             raise TypeError(
-                (
-                    "Debe proporcionar una instancia "
-                    "de SesionEntrenamiento."
-                )
+                "Debe proporcionar una instancia "
+                "de SesionEntrenamiento."
             )
 
         if sesion.id_sesion is None:
@@ -289,7 +297,7 @@ class SesionEntrenamientoDAO:
                 "La sesión debe tener un ID."
             )
 
-        id_sesion = self._validar_id(
+        sesion_id = self._validar_id(
             sesion.id_sesion,
             "El ID de sesión",
         )
@@ -308,12 +316,15 @@ class SesionEntrenamientoDAO:
                     SET
                         id_cliente = %s,
                         id_rutina = %s,
+                        id_asignacion = %s,
+                        id_asignacion_ejercicio = %s,
                         fecha = %s,
                         nombre_ejercicio = %s,
                         duracion_real = %s,
                         intensidad_real = %s,
                         calorias_quemadas = %s,
                         observaciones = %s,
+                        completada = %s,
                         veces_planificadas = %s,
                         veces_realizadas = %s
                     WHERE id_sesion = %s
@@ -323,6 +334,8 @@ class SesionEntrenamientoDAO:
                     (
                         sesion.id_cliente,
                         sesion.id_rutina,
+                        sesion.id_asignacion,
+                        sesion.id_asignacion_ejercicio,
                         sesion.fecha,
                         sesion.nombre_ejercicio,
                         sesion.duracion_real,
@@ -331,9 +344,10 @@ class SesionEntrenamientoDAO:
                         ),
                         sesion.calorias_quemadas,
                         sesion.observaciones,
+                        sesion.completada,
                         sesion.veces_planificadas,
                         sesion.veces_realizadas,
-                        id_sesion,
+                        sesion_id,
                     ),
                 )
 
@@ -366,10 +380,8 @@ class SesionEntrenamientoDAO:
 
             if codigo == "23514":
                 raise ValueError(
-                    (
-                        "Las veces realizadas no pueden "
-                        "superar las planificadas."
-                    )
+                    "Las veces realizadas no pueden "
+                    "superar las planificadas."
                 ) from error
 
             raise ValueError(
@@ -387,7 +399,7 @@ class SesionEntrenamientoDAO:
         """
         Elimina una sesión por ID.
         """
-        id_sesion = self._validar_id(
+        sesion_id = self._validar_id(
             id_sesion,
             "El ID de sesión",
         )
@@ -402,7 +414,7 @@ class SesionEntrenamientoDAO:
                     WHERE id_sesion = %s
                     RETURNING id_sesion
                     """,
-                    (id_sesion,),
+                    (sesion_id,),
                 )
 
                 eliminado = (
@@ -468,19 +480,20 @@ class SesionEntrenamientoDAO:
         """
         Valida los datos mínimos de una sesión.
 
-        id_rutina y nombre_ejercicio son opcionales:
-        existen sesiones libres o registros antiguos sin
-        una rutina o ejercicio individual asociado.
+        Una sesión puede ser libre y no tener rutina,
+        asignación ni ejercicio individual asociado.
+
+        Si tiene una asignación, debe tener también un
+        ejercicio individual. Si tiene un ejercicio
+        individual, debe tener la asignación asociada.
         """
         if not isinstance(
             sesion,
             SesionEntrenamiento,
         ):
             raise TypeError(
-                (
-                    "Debe proporcionar una instancia "
-                    "de SesionEntrenamiento."
-                )
+                "Debe proporcionar una instancia "
+                "de SesionEntrenamiento."
             )
 
         if sesion.id_cliente is None:
@@ -499,20 +512,43 @@ class SesionEntrenamientoDAO:
                 "El ID de la rutina",
             )
 
+        if sesion.id_asignacion is not None:
+            SesionEntrenamientoDAO._validar_id(
+                sesion.id_asignacion,
+                "El ID de la asignación",
+            )
+
+        if sesion.id_asignacion_ejercicio is not None:
+            SesionEntrenamientoDAO._validar_id(
+                sesion.id_asignacion_ejercicio,
+                "El ID del ejercicio asignado",
+            )
+
+        tiene_asignacion = (
+            sesion.id_asignacion is not None
+        )
+
+        tiene_ejercicio_asignado = (
+            sesion.id_asignacion_ejercicio is not None
+        )
+
+        if tiene_asignacion != tiene_ejercicio_asignado:
+            raise ValueError(
+                "La sesión debe indicar tanto la "
+                "asignación como el ejercicio asignado, "
+                "o ninguno de los dos."
+            )
+
         if sesion.veces_planificadas <= 0:
             raise ValueError(
-                (
-                    "Las veces planificadas deben ser "
-                    "mayores que cero."
-                )
+                "Las veces planificadas deben ser "
+                "mayores que cero."
             )
 
         if sesion.veces_realizadas < 0:
             raise ValueError(
-                (
-                    "Las veces realizadas no pueden "
-                    "ser negativas."
-                )
+                "Las veces realizadas no pueden "
+                "ser negativas."
             )
 
         if (
@@ -520,10 +556,8 @@ class SesionEntrenamientoDAO:
             > sesion.veces_planificadas
         ):
             raise ValueError(
-                (
-                    "Las veces realizadas no pueden "
-                    "superar las planificadas."
-                )
+                "Las veces realizadas no pueden "
+                "superar las planificadas."
             )
 
     @staticmethod
@@ -577,6 +611,12 @@ class SesionEntrenamientoDAO:
             id_sesion=datos.get("id_sesion"),
             id_cliente=datos.get("id_cliente"),
             id_rutina=datos.get("id_rutina"),
+            id_asignacion=datos.get(
+                "id_asignacion"
+            ),
+            id_asignacion_ejercicio=datos.get(
+                "id_asignacion_ejercicio"
+            ),
             fecha=fecha,
             nombre_ejercicio=(
                 datos.get(
@@ -600,6 +640,7 @@ class SesionEntrenamientoDAO:
                 )
                 or ""
             ),
+            completada=datos.get("completada"),
             veces_planificadas=int(
                 veces_planificadas
             ),
@@ -636,10 +677,8 @@ class SesionEntrenamientoDAO:
 
         if texto not in equivalencias:
             raise ValueError(
-                (
-                    "Intensidad inválida recibida: "
-                    f"{valor!r}"
-                )
+                "Intensidad inválida recibida: "
+                f"{valor!r}"
             )
 
         return equivalencias[texto]
@@ -669,3 +708,41 @@ class SesionEntrenamientoDAO:
             )
 
         return texto
+
+    @staticmethod
+    def _convertir_error_integridad(
+        error: IntegrityError,
+    ) -> ValueError:
+        """
+        Convierte errores de integridad PostgreSQL en
+        mensajes comprensibles de dominio.
+        """
+        codigo = getattr(
+            error,
+            "pgcode",
+            None,
+        )
+
+        if codigo == "23503":
+            return ValueError(
+                "El cliente, la rutina, la asignación "
+                "o el ejercicio asignado no existe."
+            )
+
+        if codigo == "23514":
+            return ValueError(
+                "Las veces realizadas deben ser mayores "
+                "o iguales a cero y no pueden superar "
+                "las planificadas."
+            )
+
+        if codigo == "23502":
+            return ValueError(
+                "Falta un dato obligatorio para guardar "
+                "la sesión."
+            )
+
+        return ValueError(
+            "No se pudo guardar o actualizar la sesión "
+            "por una restricción de integridad."
+        )

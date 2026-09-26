@@ -10,17 +10,14 @@ from unittest.mock import Mock
 from src.controladores.control_base import ControlBase
 from src.modelos.progreso_mensual import ProgresoMensual
 from src.modelos.rutina import Rutina
+from src.persistencia.cliente_dao import ClienteDAO
 from src.persistencia.progreso_mensual_dao import (
     ProgresoMensualDAO,
 )
 from src.persistencia.sesion_entrenamiento_dao import (
     SesionEntrenamientoDAO,
 )
-from src.utilidades.logger import (
-    log_consulta_impacto,
-    log_consulta_progreso,
-    log_generar_progreso,
-)
+
 
 
 def _obtener_progreso_dao_default() -> ProgresoMensualDAO:
@@ -368,7 +365,11 @@ class ControlProgreso(ControlBase):
             else _obtener_sesion_dao_default()
         )
 
-        self._cliente_dao = cliente_dao
+        self._cliente_dao = (
+            cliente_dao
+            if cliente_dao is not None
+            else ClienteDAO()
+        )
 
     @property
     def progreso_dao(
@@ -555,9 +556,8 @@ class ControlProgreso(ControlBase):
         self._registrar_log(
             usuario_log,
             "CONSULTA_PROGRESO",
+            "Cliente consultó su resumen de progreso",
         )
-
-        log_consulta_progreso(usuario_log)
 
         return {
             "id_cliente": id_cliente,
@@ -635,9 +635,8 @@ class ControlProgreso(ControlBase):
         self._registrar_log(
             usuario,
             "CONSULTA_IMPACTO",
+            "Consulta de impacto calórico de rutina",
         )
-
-        log_consulta_impacto(usuario)
 
         return total.quantize(
             Decimal("0.01")
@@ -792,30 +791,61 @@ class ControlProgreso(ControlBase):
             )
         )
 
-        progreso = _instanciar_progreso_mensual(
-            id_cliente=id_cliente,
-            mes=mes_numero,
-            anio=anio_numero,
-            peso_registrado=peso_decimal,
-            sesiones_completadas=(
-                sesiones_completadas
-            ),
-            sesiones_planificadas=(
-                total_planificadas
-            ),
+        fecha_mes = date(
+            anio_numero,
+            mes_numero,
+            1,
         )
 
-        if observaciones is not None and hasattr(
-            progreso,
-            "observaciones",
-        ):
-            progreso.observaciones = observaciones
-
-        progreso_guardado = (
-            self._progreso_dao.guardar(
-                progreso
+        progreso_existente = (
+            self._progreso_dao.buscar_por_cliente_y_mes(
+                id_cliente,
+                fecha_mes,
             )
         )
+
+        if progreso_existente is not None:
+            progreso_existente.peso = peso_decimal
+
+            progreso_existente.sesiones_completadas = (
+                sesiones_completadas
+            )
+
+            progreso_existente.sesiones_planificadas = (
+                total_planificadas
+            )
+
+            progreso_guardado = (
+                self._progreso_dao.actualizar(
+                    progreso_existente
+                )
+            )
+
+        else:
+            progreso = _instanciar_progreso_mensual(
+                id_cliente=id_cliente,
+                mes=mes_numero,
+                anio=anio_numero,
+                peso_registrado=peso_decimal,
+                sesiones_completadas=(
+                    sesiones_completadas
+                ),
+                sesiones_planificadas=(
+                    total_planificadas
+                ),
+            )
+
+            if observaciones is not None and hasattr(
+                progreso,
+                "observaciones",
+            ):
+                progreso.observaciones = observaciones
+
+            progreso_guardado = (
+                self._progreso_dao.guardar(
+                    progreso
+                )
+            )
 
         self._actualizar_peso_cliente(
             cliente=cliente,
@@ -837,7 +867,6 @@ class ControlProgreso(ControlBase):
             ),
         )
 
-        log_generar_progreso(usuario_log)
 
         return progreso_guardado
 
@@ -915,9 +944,8 @@ class ControlProgreso(ControlBase):
         self._registrar_log(
             usuario_log,
             "CONSULTA_PROGRESO",
+            "Cliente consultó su historial de progreso",
         )
-
-        log_consulta_progreso(usuario_log)
 
         resultado = (
             self._progreso_dao.buscar_por_cliente(

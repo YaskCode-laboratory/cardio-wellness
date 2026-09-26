@@ -2,6 +2,7 @@ from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 from typing import Optional, Union
 
+
 from src.modelos.enums import Intensidad
 
 
@@ -34,10 +35,16 @@ class SesionEntrenamiento:
         nombre_ejercicio: str = "",
         veces_planificadas: int = 1,
         veces_realizadas: int = 0,
+        id_asignacion: Optional[int] = None,
+        id_asignacion_ejercicio: Optional[int] = None,
     ) -> None:
         self.id_sesion = id_sesion
         self.id_cliente = id_cliente
         self.id_rutina = id_rutina
+        self.id_asignacion = id_asignacion
+        self.id_asignacion_ejercicio = (
+            id_asignacion_ejercicio
+        )
         self.fecha = fecha
         self.nombre_ejercicio = nombre_ejercicio
         self.duracion_real = duracion_real
@@ -50,10 +57,8 @@ class SesionEntrenamiento:
         # El parámetro completada se conserva para
         # compatibilidad con código y pruebas anteriores.
         #
-        # No se almacena ni se usa para rechazar la sesión:
-        # el estado real se obtiene dinámicamente desde la
-        # propiedad completada según las cantidades realizadas
-        # y planificadas.
+        # El estado real se calcula dinámicamente según
+        # veces_realizadas y veces_planificadas.
         if completada is not None and not isinstance(
             completada,
             bool,
@@ -78,10 +83,8 @@ class SesionEntrenamiento:
                 or valor <= 0
             ):
                 raise ValueError(
-                    (
-                        "El ID de sesión debe ser "
-                        "un entero positivo."
-                    )
+                    "El ID de sesión debe ser un "
+                    "entero positivo."
                 )
 
         self._id_sesion = valor
@@ -102,10 +105,8 @@ class SesionEntrenamiento:
                 or valor <= 0
             ):
                 raise ValueError(
-                    (
-                        "El ID de cliente debe ser "
-                        "un entero positivo."
-                    )
+                    "El ID de cliente debe ser un "
+                    "entero positivo."
                 )
 
         self._id_cliente = valor
@@ -130,13 +131,68 @@ class SesionEntrenamiento:
                 or valor <= 0
             ):
                 raise ValueError(
-                    (
-                        "El ID de rutina debe ser "
-                        "un entero positivo."
-                    )
+                    "El ID de rutina debe ser un "
+                    "entero positivo."
                 )
 
         self._id_rutina = valor
+
+    @property
+    def id_asignacion(self) -> Optional[int]:
+        """
+        ID de la asignación de rutina relacionada con la
+        sesión.
+
+        Puede ser None para sesiones antiguas, libres o
+        no relacionadas con una rutina asignada.
+        """
+        return self._id_asignacion
+
+    @id_asignacion.setter
+    def id_asignacion(
+        self,
+        valor: Optional[int],
+    ) -> None:
+        if valor is not None:
+            if (
+                isinstance(valor, bool)
+                or not isinstance(valor, int)
+                or valor <= 0
+            ):
+                raise ValueError(
+                    "El ID de asignación debe ser un "
+                    "entero positivo."
+                )
+
+        self._id_asignacion = valor
+
+    @property
+    def id_asignacion_ejercicio(self) -> Optional[int]:
+        """
+        ID del ejercicio individualizado dentro de una
+        asignación.
+
+        Puede ser None para sesiones antiguas o libres.
+        """
+        return self._id_asignacion_ejercicio
+
+    @id_asignacion_ejercicio.setter
+    def id_asignacion_ejercicio(
+        self,
+        valor: Optional[int],
+    ) -> None:
+        if valor is not None:
+            if (
+                isinstance(valor, bool)
+                or not isinstance(valor, int)
+                or valor <= 0
+            ):
+                raise ValueError(
+                    "El ID del ejercicio asignado debe "
+                    "ser un entero positivo."
+                )
+
+        self._id_asignacion_ejercicio = valor
 
     @property
     def fecha(self) -> date:
@@ -172,20 +228,15 @@ class SesionEntrenamiento:
 
         if not isinstance(valor, str):
             raise ValueError(
-                (
-                    "El nombre del ejercicio "
-                    "debe ser texto."
-                )
+                "El nombre del ejercicio debe ser texto."
             )
 
         nombre = valor.strip()
 
         if len(nombre) > 100:
             raise ValueError(
-                (
-                    "El nombre del ejercicio no puede "
-                    "superar 100 caracteres."
-                )
+                "El nombre del ejercicio no puede "
+                "superar 100 caracteres."
             )
 
         self._nombre_ejercicio = nombre
@@ -252,10 +303,8 @@ class SesionEntrenamiento:
 
             except ValueError as error:
                 raise ValueError(
-                    (
-                        "Intensidad inválida. Debe ser "
-                        "BAJA, MEDIA o ALTA."
-                    )
+                    "Intensidad inválida. Debe ser "
+                    "BAJA, MEDIA o ALTA."
                 ) from error
 
     @property
@@ -330,10 +379,8 @@ class SesionEntrenamiento:
             or valor <= 0
         ):
             raise ValueError(
-                (
-                    "Las veces planificadas deben ser "
-                    "un entero mayor que cero."
-                )
+                "Las veces planificadas deben ser un "
+                "entero mayor que cero."
             )
 
         if hasattr(
@@ -342,10 +389,8 @@ class SesionEntrenamiento:
         ):
             if valor < self._veces_realizadas:
                 raise ValueError(
-                    (
-                        "Las veces planificadas no pueden "
-                        "ser menores que las realizadas."
-                    )
+                    "Las veces planificadas no pueden "
+                    "ser menores que las realizadas."
                 )
 
         self._veces_planificadas = valor
@@ -365,10 +410,8 @@ class SesionEntrenamiento:
             or valor < 0
         ):
             raise ValueError(
-                (
-                    "Las veces realizadas deben ser "
-                    "un entero igual o mayor que cero."
-                )
+                "Las veces realizadas deben ser un "
+                "entero igual o mayor que cero."
             )
 
         if hasattr(
@@ -377,10 +420,8 @@ class SesionEntrenamiento:
         ):
             if valor > self._veces_planificadas:
                 raise ValueError(
-                    (
-                        "Las veces realizadas no pueden "
-                        "superar las planificadas."
-                    )
+                    "Las veces realizadas no pueden "
+                    "superar las planificadas."
                 )
 
         self._veces_realizadas = valor
@@ -431,12 +472,10 @@ class SesionEntrenamiento:
         """
         if not self.completada:
             raise ValueError(
-                (
-                    "La sesión no puede marcarse como "
-                    "completada: se realizaron "
-                    f"{self.veces_realizadas} de "
-                    f"{self.veces_planificadas} veces."
-                )
+                "La sesión no puede marcarse como "
+                "completada: se realizaron "
+                f"{self.veces_realizadas} de "
+                f"{self.veces_planificadas} veces."
             )
 
     def obtener_estado_cumplimiento(self) -> str:
@@ -458,6 +497,18 @@ class SesionEntrenamiento:
             else "Sin rutina"
         )
 
+        asignacion = (
+            str(self.id_asignacion)
+            if self.id_asignacion is not None
+            else "Sin asignación"
+        )
+
+        ejercicio_asignado = (
+            str(self.id_asignacion_ejercicio)
+            if self.id_asignacion_ejercicio is not None
+            else "Sin ejercicio asignado"
+        )
+
         ejercicio = (
             self.nombre_ejercicio
             or "Sin ejercicio"
@@ -467,6 +518,9 @@ class SesionEntrenamiento:
             f"Sesión {self.id_sesion} | "
             f"Cliente: {self.id_cliente} | "
             f"Rutina: {rutina} | "
+            f"Asignación: {asignacion} | "
+            f"Ejercicio asignado: "
+            f"{ejercicio_asignado} | "
             f"Ejercicio: {ejercicio} | "
             f"Fecha: {self.fecha} | "
             f"Duración: {self.duracion_real} min | "
@@ -489,6 +543,9 @@ class SesionEntrenamiento:
             f"id_sesion={self.id_sesion}, "
             f"id_cliente={self.id_cliente}, "
             f"id_rutina={self.id_rutina}, "
+            f"id_asignacion={self.id_asignacion}, "
+            "id_asignacion_ejercicio="
+            f"{self.id_asignacion_ejercicio}, "
             f"fecha={self.fecha}, "
             "nombre_ejercicio="
             f"'{self.nombre_ejercicio}', "

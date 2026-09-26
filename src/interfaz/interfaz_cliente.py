@@ -558,16 +558,12 @@ class InterfazCliente(tk.Tk):
 
     def cerrarSesion(self) -> None:
         """
-        Registra el cierre, destruye la ventana y abre login.
+        Cierra la sesión, destruye la ventana y abre login.
         """
-        try:
-            self._control_sesiones._registrar_log(
-                self._cliente_actual.correo_electronico,
-                "LOGOUT",
+        if not self._es_modo_pruebas():
+            self._control_autenticacion.cerrar_sesion(
+                self._cliente_actual
             )
-
-        except Exception:
-            pass
 
         self.destroy()
 

@@ -2,19 +2,30 @@
 Controlador para la gestión de sesiones de entrenamiento.
 """
 
+from src.persistencia.cliente_dao import ClienteDAO
+from src.servicios.calculadora_calorias import (
+    CalculadoraCalorias,
+)
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Any, List, Optional, Union
+
 
 from src.controladores.control_base import ControlBase
 from src.modelos.enums import Intensidad
 from src.modelos.sesion_entrenamiento import (
     SesionEntrenamiento,
 )
+from src.persistencia.asignacion_rutina_dao import (
+    AsignacionRutinaDAO,
+)
+from src.persistencia.asignacion_rutina_ejercicio_dao import (
+    AsignacionRutinaEjercicioDAO,
+)
 from src.persistencia.sesion_entrenamiento_dao import (
     SesionEntrenamientoDAO,
 )
-from src.utilidades.logger import log_generar_progreso
+
 
 
 class ControlSesiones(ControlBase):
@@ -29,6 +40,13 @@ class ControlSesiones(ControlBase):
             SesionEntrenamientoDAO
         ] = None,
         ruta_log: str = "logs/LOG_CARDIO.txt",
+        asignacion_dao: Optional[
+            AsignacionRutinaDAO
+        ] = None,
+        asignacion_ejercicio_dao: Optional[
+            AsignacionRutinaEjercicioDAO
+        ] = None,
+        cliente_dao: Optional[ClienteDAO] = None,
     ) -> None:
         super().__init__(
             ruta_log=ruta_log,
@@ -40,6 +58,24 @@ class ControlSesiones(ControlBase):
             else SesionEntrenamientoDAO()
         )
 
+        self.asignacion_dao = (
+            asignacion_dao
+            if asignacion_dao is not None
+            else AsignacionRutinaDAO()
+        )
+
+        self.asignacion_ejercicio_dao = (
+            asignacion_ejercicio_dao
+            if asignacion_ejercicio_dao is not None
+            else AsignacionRutinaEjercicioDAO()
+        )
+
+        self.cliente_dao = (
+            cliente_dao
+            if cliente_dao is not None
+            else ClienteDAO()
+        )
+
     def registrar_sesion(
         self,
         cliente: Any,
@@ -49,11 +85,13 @@ class ControlSesiones(ControlBase):
             Intensidad,
             str,
         ],
-        calorias_quemadas: Union[
-            int,
-            float,
-            Decimal,
-        ],
+        calorias_quemadas: Optional[
+            Union[
+                int,
+                float,
+                Decimal,
+            ]
+        ] = None,
         observaciones: str = "",
         fecha: Optional[
             Union[
@@ -64,13 +102,16 @@ class ControlSesiones(ControlBase):
         nombre_ejercicio: str = "",
         veces_planificadas: int = 1,
         veces_realizadas: int = 0,
+        id_asignacion_ejercicio: Optional[int] = None,
     ) -> SesionEntrenamiento:
         """
         Registra una sesión diaria.
 
-        La sesión queda completada únicamente cuando:
-
-            veces_realizadas >= veces_planificadas
+        Si se recibe id_asignacion_ejercicio, la sesión se
+        vincula al plan individual activo del cliente. Luego
+        se recalcula el progreso y se finaliza la asignación
+        automáticamente si todos sus ejercicios activos
+        alcanzaron la meta.
         """
         id_cliente = self._extraer_id(
             cliente,
@@ -87,14 +128,14 @@ class ControlSesiones(ControlBase):
 
         if id_cliente is None or id_cliente <= 0:
             raise ValueError(
-                "El ID del cliente debe ser "
-                "un entero positivo."
+                "El ID del cliente debe ser un entero "
+                "positivo."
             )
 
         if id_rutina is None or id_rutina <= 0:
             raise ValueError(
-                "El ID de rutina debe ser "
-                "un entero positivo."
+                "El ID de rutina debe ser un entero "
+                "positivo."
             )
 
         if not isinstance(
@@ -105,14 +146,11 @@ class ControlSesiones(ControlBase):
                 "El nombre del ejercicio debe ser texto."
             )
 
-        nombre_ejercicio = (
-            nombre_ejercicio.strip()
-        )
+        nombre_ejercicio = nombre_ejercicio.strip()
 
         if not nombre_ejercicio:
             raise ValueError(
-                "El nombre del ejercicio "
-                "es obligatorio."
+                "El nombre del ejercicio es obligatorio."
             )
 
         if len(nombre_ejercicio) > 100:
@@ -122,14 +160,8 @@ class ControlSesiones(ControlBase):
             )
 
         if (
-            isinstance(
-                duracion_real,
-                bool,
-            )
-            or not isinstance(
-                duracion_real,
-                int,
-            )
+            isinstance(duracion_real, bool)
+            or not isinstance(duracion_real, int)
             or duracion_real <= 0
         ):
             raise ValueError(
@@ -137,71 +169,59 @@ class ControlSesiones(ControlBase):
                 "positivo."
             )
 
-        if isinstance(
-            calorias_quemadas,
-            bool,
-        ):
+        cliente_actual = self.cliente_dao.buscar_por_id(
+            id_cliente
+        )
+
+        if cliente_actual is None:
             raise ValueError(
-                "Las calorías deben ser numéricas."
+                "No se encontró el cliente para calcular "
+                "las calorías estimadas."
             )
 
-        if not isinstance(
-            calorias_quemadas,
-            (
-                int,
-                float,
-                Decimal,
-            ),
-        ):
+        peso_cliente = getattr(
+            cliente_actual,
+            "peso",
+            None,
+        )
+
+        if peso_cliente is None:
             raise ValueError(
-                "Las calorías deben ser numéricas."
+                "El cliente no tiene un peso registrado. "
+                "Actualice el peso antes de registrar "
+                "una sesión."
             )
 
-        try:
-            calorias = Decimal(
-                str(calorias_quemadas)
-            )
+        intensidad = self._normalizar_intensidad(
+            intensidad_real
+        )
 
-        except Exception as error:
-            raise ValueError(
-                "Las calorías deben ser un valor válido."
-            ) from error
-
-        if calorias < Decimal("0"):
-            raise ValueError(
-                "Las calorías no pueden ser negativas."
-            )
-
-        veces_planificadas = (
-            self._validar_cantidad(
-                veces_planificadas,
-                "Las veces planificadas",
-                minimo=1,
+        calorias = (
+            CalculadoraCalorias.calcular_calorias_cardio(
+                peso_kg=peso_cliente,
+                duracion_minutos=duracion_real,
+                intensidad=intensidad,
             )
         )
 
-        veces_realizadas = (
-            self._validar_cantidad(
-                veces_realizadas,
-                "Las veces realizadas",
-                minimo=0,
-            )
+        veces_planificadas = self._validar_cantidad(
+            veces_planificadas,
+            "Las veces planificadas",
+            minimo=1,
         )
 
-        if (
-            veces_realizadas
-            > veces_planificadas
-        ):
+        veces_realizadas = self._validar_cantidad(
+            veces_realizadas,
+            "Las veces realizadas",
+            minimo=0,
+        )
+
+        if veces_realizadas > veces_planificadas:
             raise ValueError(
                 "Las veces realizadas no pueden "
                 "superar las planificadas."
             )
 
-        intensidad = (
-            self._normalizar_intensidad(
-                intensidad_real
-            )
-        )
 
         fecha_sesion = (
             fecha
@@ -209,63 +229,144 @@ class ControlSesiones(ControlBase):
             else date.today()
         )
 
-        if isinstance(
-            fecha_sesion,
-            datetime,
-        ):
+        if isinstance(fecha_sesion, datetime):
             fecha_sesion = fecha_sesion.date()
 
-        if not isinstance(
-            fecha_sesion,
-            date,
-        ):
+        if not isinstance(fecha_sesion, date):
             raise ValueError(
                 "La fecha debe ser un objeto date."
             )
 
-        sesion = SesionEntrenamiento(
-            id_cliente=id_cliente,
-            id_rutina=id_rutina,
-            fecha=fecha_sesion,
-            nombre_ejercicio=(
-                nombre_ejercicio
-            ),
-            duracion_real=duracion_real,
-            intensidad_real=intensidad,
-            calorias_quemadas=calorias,
-            observaciones=(
-                observaciones or ""
-            ),
-            veces_planificadas=(
-                veces_planificadas
-            ),
-            veces_realizadas=(
-                veces_realizadas
-            ),
-        )
+        id_asignacion: Optional[int] = None
 
-        try:
-            sesion_guardada = (
-                self.sesion_dao.guardar(
-                    sesion
+        if id_asignacion_ejercicio is not None:
+            id_asignacion_ejercicio = self._validar_id(
+                id_asignacion_ejercicio,
+                "ejercicio asignado",
+            )
+
+            asignacion = (
+                self.asignacion_dao.buscar_activa(
+                    id_cliente
                 )
             )
 
-            self._registrar_log(
-                f"CLIENTE_{id_cliente}",
-                (
-                    "REGISTRO_SESION "
-                    f"Rutina: {id_rutina}, "
-                    f"Ejercicio: "
-                    f"{nombre_ejercicio}, "
-                    f"Realizadas: "
-                    f"{veces_realizadas}/"
-                    f"{veces_planificadas}"
-                ),
+            if asignacion is None:
+                raise ValueError(
+                    "El cliente no tiene una rutina activa."
+                )
+
+            if asignacion.id_rutina != id_rutina:
+                raise ValueError(
+                    "La rutina indicada no coincide con "
+                    "la rutina activa del cliente."
+                )
+
+            ejercicio_asignado = (
+                self.asignacion_ejercicio_dao.buscar_por_id(
+                    id_asignacion_ejercicio
+                )
             )
 
-            log_generar_progreso(
-                f"CLIENTE_{id_cliente}"
+            if ejercicio_asignado is None:
+                raise ValueError(
+                    "El ejercicio asignado no existe."
+                )
+
+            if not ejercicio_asignado.activo:
+                raise ValueError(
+                    "El ejercicio asignado está inactivo."
+                )
+
+            if (
+                ejercicio_asignado.id_asignacion
+                != asignacion.id_asignacion
+            ):
+                raise ValueError(
+                    "El ejercicio no pertenece a la "
+                    "rutina activa del cliente."
+                )
+
+            id_asignacion = asignacion.id_asignacion
+
+        sesion = SesionEntrenamiento(
+            id_cliente=id_cliente,
+            id_rutina=id_rutina,
+            id_asignacion=id_asignacion,
+            id_asignacion_ejercicio=(
+                id_asignacion_ejercicio
+            ),
+            fecha=fecha_sesion,
+            nombre_ejercicio=nombre_ejercicio,
+            duracion_real=duracion_real,
+            intensidad_real=intensidad,
+            calorias_quemadas=calorias,
+            observaciones=observaciones or "",
+            veces_planificadas=veces_planificadas,
+            veces_realizadas=veces_realizadas,
+        )
+
+        try:
+            sesion_guardada = self.sesion_dao.guardar(
+                sesion
+            )
+
+            rutina_finalizada = False
+
+            if id_asignacion is not None:
+                rutina_completada = (
+                    self.asignacion_ejercicio_dao
+                    .asignacion_esta_completada(
+                        id_asignacion
+                    )
+                )
+
+                if rutina_completada:
+                    rutina_finalizada = (
+                        self.asignacion_dao
+                        .finalizar_asignacion(
+                            id_asignacion
+                        )
+                    )
+
+                    if rutina_finalizada:
+                        self._registrar_log(
+                            f"CLIENTE_{id_cliente}",
+                            (
+                                "FINALIZACION_AUTOMATICA_RUTINA "
+                                f"Asignacion: {id_asignacion}, "
+                                f"Rutina: {id_rutina}"
+                            ),
+                        )
+
+            mensaje_log = (
+                f"Rutina: {id_rutina}, "
+                f"Ejercicio: {nombre_ejercicio}, "
+                f"Duración: {duracion_real} min, "
+                f"Intensidad: {intensidad.value}, "
+                f"Calorías estimadas: "
+                f"{calorias:.2f} kcal, "
+                f"Realizadas: "
+                f"{veces_realizadas}/"
+                f"{veces_planificadas}"
+            )
+
+            if id_asignacion is not None:
+                mensaje_log += (
+                    f", Asignacion: {id_asignacion}, "
+                    "EjercicioAsignado: "
+                    f"{id_asignacion_ejercicio}"
+                )
+
+            if rutina_finalizada:
+                mensaje_log += (
+                    ", RutinaFinalizada: True"
+                )
+
+            self._registrar_log(
+                f"CLIENTE_{id_cliente}",
+                "REGISTRO_SESION",
+                mensaje_log,
             )
 
             return sesion_guardada
@@ -325,10 +426,8 @@ class ControlSesiones(ControlBase):
             )
 
         try:
-            resultado = (
-                self.sesion_dao.actualizar(
-                    sesion
-                )
+            resultado = self.sesion_dao.actualizar(
+                sesion
             )
 
             self._registrar_log(
@@ -368,10 +467,8 @@ class ControlSesiones(ControlBase):
         )
 
         try:
-            sesiones = (
-                self.sesion_dao.listar_por_cliente(
-                    id_cliente_validado
-                )
+            sesiones = self.sesion_dao.listar_por_cliente(
+                id_cliente_validado
             )
 
             return sesiones or []
@@ -439,10 +536,8 @@ class ControlSesiones(ControlBase):
         )
 
         try:
-            resultado = (
-                self.sesion_dao.eliminar_por_id(
-                    id_validado
-                )
+            resultado = self.sesion_dao.eliminar_por_id(
+                id_validado
             )
 
             if resultado:
@@ -471,20 +566,15 @@ class ControlSesiones(ControlBase):
         fecha: Optional[date] = None,
     ) -> int:
         """
-        Cuenta sesiones completadas.
-
-        Este método utiliza las sesiones ya cargadas
-        por el DAO y filtra por fecha si se indica.
+        Cuenta sesiones completadas de un cliente.
         """
-        id_cliente = self._validar_id(
+        cliente_id = self._validar_id(
             id_cliente,
             "cliente",
         )
 
-        sesiones = (
-            self.sesion_dao.listar_por_cliente(
-                id_cliente
-            )
+        sesiones = self.sesion_dao.listar_por_cliente(
+            cliente_id
         )
 
         if fecha is None:
@@ -497,12 +587,12 @@ class ControlSesiones(ControlBase):
             and sesion.completada
         )
 
-        def porcentaje_cumplimiento_sesion(
+    def porcentaje_cumplimiento_sesion(
         self,
         sesion: SesionEntrenamiento,
     ) -> float:
-         """
-        Calcula el porcentaje de cumplimiento.
+        """
+        Calcula el porcentaje de cumplimiento de una sesión.
         """
         if not isinstance(
             sesion,
@@ -546,11 +636,8 @@ class ControlSesiones(ControlBase):
         ):
             for campo in campos:
                 if campo in objeto:
-                    return (
-                        ControlSesiones
-                        ._convertir_id(
-                            objeto[campo]
-                        )
+                    return ControlSesiones._convertir_id(
+                        objeto[campo]
                     )
 
             return None
@@ -560,13 +647,10 @@ class ControlSesiones(ControlBase):
                 objeto,
                 campo,
             ):
-                return (
-                    ControlSesiones
-                    ._convertir_id(
-                        getattr(
-                            objeto,
-                            campo,
-                        )
+                return ControlSesiones._convertir_id(
+                    getattr(
+                        objeto,
+                        campo,
                     )
                 )
 
@@ -603,21 +687,13 @@ class ControlSesiones(ControlBase):
         Valida un ID positivo.
         """
         if (
-            isinstance(
-                valor,
-                bool,
-            )
-            or not isinstance(
-                valor,
-                int,
-            )
+            isinstance(valor, bool)
+            or not isinstance(valor, int)
             or valor <= 0
         ):
             raise ValueError(
-                (
-                    f"El ID de {nombre} debe ser "
-                    "un entero positivo."
-                )
+                f"El ID de {nombre} debe ser un "
+                "entero positivo."
             )
 
         return valor
@@ -632,14 +708,8 @@ class ControlSesiones(ControlBase):
         Valida una cantidad entera.
         """
         if (
-            isinstance(
-                valor,
-                bool,
-            )
-            or not isinstance(
-                valor,
-                int,
-            )
+            isinstance(valor, bool)
+            or not isinstance(valor, int)
         ):
             raise ValueError(
                 f"{nombre} debe ser un entero."
@@ -647,10 +717,8 @@ class ControlSesiones(ControlBase):
 
         if valor < minimo:
             raise ValueError(
-                (
-                    f"{nombre} debe ser mayor o igual "
-                    f"a {minimo}."
-                )
+                f"{nombre} debe ser mayor o igual "
+                f"a {minimo}."
             )
 
         return valor
@@ -691,8 +759,6 @@ class ControlSesiones(ControlBase):
 
             except ValueError as error:
                 raise ValueError(
-                    (
-                        "Intensidad inválida. Debe ser "
-                        "BAJA, MEDIA o ALTA."
-                    )
+                    "Intensidad inválida. Debe ser "
+                    "BAJA, MEDIA o ALTA."
                 ) from error

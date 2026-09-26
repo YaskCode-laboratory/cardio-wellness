@@ -1,4 +1,5 @@
 from datetime import date
+
 import tkinter as tk
 from tkinter import ttk
 
@@ -10,7 +11,11 @@ from src.interfaz.interfaz_base import InterfazBase
 
 class InterfazRegistroSesion(InterfazBase):
     """
-    Pestaña para registrar una sesión diaria.
+    Pestaña para registrar sesiones de entrenamiento.
+
+    Cuando el cliente posee una rutina activa, solamente
+    puede registrar sesiones para ejercicios pertenecientes
+    a su asignación individual.
     """
 
     def __init__(
@@ -34,19 +39,24 @@ class InterfazRegistroSesion(InterfazBase):
         self._id_cliente = id_cliente
         self._id_rutina = id_rutina
 
+        self._id_asignacion = None
+        self._ejercicios_asignados = []
+        self._ejercicio_asignado_actual = None
+
         self.mostrarFormularioSesion()
+        self._cargar_rutina_activa()
 
     @property
     def id_cliente(self) -> int:
+        """
+        Devuelve el ID del cliente autenticado.
+        """
         return self._id_cliente
 
     @property
     def id_rutina(self) -> int | None:
         """
-        Devuelve el ID de la rutina asignada.
-
-        Se usa getattr para mantener compatibilidad con
-        pruebas que crean la interfaz sin llamar __init__.
+        Devuelve el ID de la rutina activa del cliente.
         """
         return getattr(
             self,
@@ -60,7 +70,7 @@ class InterfazRegistroSesion(InterfazBase):
         """
         form = ttk.LabelFrame(
             self,
-            text="Detalle del entrenamiento",
+            text="Registrar sesión de entrenamiento",
             padding=15,
         )
 
@@ -69,19 +79,12 @@ class InterfazRegistroSesion(InterfazBase):
             pady=10,
         )
 
-        id_rutina = getattr(
-            self,
-            "_id_rutina",
-            "Sin asignar",
+        self._lbl_rutina = ttk.Label(
+            form,
+            text="Rutina asignada: cargando...",
         )
 
-        ttk.Label(
-            form,
-            text=(
-                f"Rutina asignada: "
-                f"{id_rutina}"
-            ),
-        ).grid(
+        self._lbl_rutina.grid(
             row=0,
             column=0,
             columnspan=2,
@@ -92,7 +95,7 @@ class InterfazRegistroSesion(InterfazBase):
 
         ttk.Label(
             form,
-            text="Nombre del ejercicio:",
+            text="Ejercicio de mi rutina:",
         ).grid(
             row=1,
             column=0,
@@ -101,13 +104,114 @@ class InterfazRegistroSesion(InterfazBase):
             padx=5,
         )
 
-        self._ent_nombre_ejercicio = ttk.Entry(
+        self._cb_ejercicio = ttk.Combobox(
+            form,
+            state="readonly",
+            width=35,
+        )
+
+        self._cb_ejercicio.grid(
+            row=1,
+            column=1,
+            pady=8,
+            padx=5,
+        )
+
+        self._cb_ejercicio.bind(
+            "<<ComboboxSelected>>",
+            self._seleccionar_ejercicio,
+        )
+
+        ttk.Label(
+            form,
+            text="Meta total:",
+        ).grid(
+            row=2,
+            column=0,
+            sticky="w",
+            pady=8,
+            padx=5,
+        )
+
+        self._lbl_meta_total = ttk.Label(
+            form,
+            text="-",
+        )
+
+        self._lbl_meta_total.grid(
+            row=2,
+            column=1,
+            sticky="w",
+            pady=8,
+            padx=5,
+        )
+
+        ttk.Label(
+            form,
+            text="Ya realizadas:",
+        ).grid(
+            row=3,
+            column=0,
+            sticky="w",
+            pady=8,
+            padx=5,
+        )
+
+        self._lbl_veces_realizadas = ttk.Label(
+            form,
+            text="-",
+        )
+
+        self._lbl_veces_realizadas.grid(
+            row=3,
+            column=1,
+            sticky="w",
+            pady=8,
+            padx=5,
+        )
+
+        ttk.Label(
+            form,
+            text="Restantes:",
+        ).grid(
+            row=4,
+            column=0,
+            sticky="w",
+            pady=8,
+            padx=5,
+        )
+
+        self._lbl_veces_restantes = ttk.Label(
+            form,
+            text="-",
+        )
+
+        self._lbl_veces_restantes.grid(
+            row=4,
+            column=1,
+            sticky="w",
+            pady=8,
+            padx=5,
+        )
+
+        ttk.Label(
+            form,
+            text="Cantidad realizada ahora:",
+        ).grid(
+            row=5,
+            column=0,
+            sticky="w",
+            pady=8,
+            padx=5,
+        )
+
+        self._ent_veces_realizadas = ttk.Entry(
             form,
             width=25,
         )
 
-        self._ent_nombre_ejercicio.grid(
-            row=1,
+        self._ent_veces_realizadas.grid(
+            row=5,
             column=1,
             pady=8,
             padx=5,
@@ -117,7 +221,7 @@ class InterfazRegistroSesion(InterfazBase):
             form,
             text="Duración real (min):",
         ).grid(
-            row=2,
+            row=6,
             column=0,
             sticky="w",
             pady=8,
@@ -130,7 +234,7 @@ class InterfazRegistroSesion(InterfazBase):
         )
 
         self._ent_duracion.grid(
-            row=2,
+            row=6,
             column=1,
             pady=8,
             padx=5,
@@ -140,7 +244,7 @@ class InterfazRegistroSesion(InterfazBase):
             form,
             text="Intensidad real:",
         ).grid(
-            row=3,
+            row=7,
             column=0,
             sticky="w",
             pady=8,
@@ -159,103 +263,36 @@ class InterfazRegistroSesion(InterfazBase):
         )
 
         self._cb_intensidad.grid(
-            row=3,
+            row=7,
             column=1,
             pady=8,
             padx=5,
         )
 
-        ttk.Label(
-            form,
-            text="Calorías quemadas:",
-        ).grid(
-            row=4,
-            column=0,
-            sticky="w",
-            pady=8,
-            padx=5,
-        )
-
-        self._ent_calorias = ttk.Entry(
-            form,
-            width=25,
-        )
-
-        self._ent_calorias.grid(
-            row=4,
-            column=1,
-            pady=8,
-            padx=5,
-        )
-
-        ttk.Label(
-            form,
-            text="Veces planificadas:",
-        ).grid(
-            row=5,
-            column=0,
-            sticky="w",
-            pady=8,
-            padx=5,
-        )
-
-        self._ent_veces_planificadas = ttk.Entry(
-            form,
-            width=25,
-        )
-
-        self._ent_veces_planificadas.grid(
-            row=5,
-            column=1,
-            pady=8,
-            padx=5,
-        )
-
-        ttk.Label(
-            form,
-            text="Veces realizadas:",
-        ).grid(
-            row=6,
-            column=0,
-            sticky="w",
-            pady=8,
-            padx=5,
-        )
-
-        self._ent_veces_realizadas = ttk.Entry(
-            form,
-            width=25,
-        )
-
-        self._ent_veces_realizadas.grid(
-            row=6,
-            column=1,
-            pady=8,
-            padx=5,
-        )
-
-        ttk.Label(
+        self._lbl_calorias_estimadas = ttk.Label(
             form,
             text=(
-                "La sesión se completará automáticamente "
-                "si las veces realizadas alcanzan "
-                "las planificadas."
+                "Las calorías se calcularán "
+                "automáticamente según tu peso, "
+                "duración e intensidad."
             ),
             foreground="#555555",
-        ).grid(
-            row=7,
+            wraplength=350,
+        )
+
+        self._lbl_calorias_estimadas.grid(
+            row=8,
             column=0,
             columnspan=2,
             sticky="w",
             pady=8,
             padx=5,
         )
-
         ttk.Label(
             form,
             text="Observaciones:",
         ).grid(
-            row=8,
+            row=9,
             column=0,
             sticky="w",
             pady=8,
@@ -268,8 +305,26 @@ class InterfazRegistroSesion(InterfazBase):
         )
 
         self._ent_observaciones.grid(
-            row=8,
+            row=9,
             column=1,
+            pady=8,
+            padx=5,
+        )
+
+        self._lbl_mensaje = ttk.Label(
+            form,
+            text=(
+                "La meta solo puede ser modificada "
+                "por un administrador."
+            ),
+            foreground="#555555",
+        )
+
+        self._lbl_mensaje.grid(
+            row=10,
+            column=0,
+            columnspan=2,
+            sticky="w",
             pady=8,
             padx=5,
         )
@@ -277,7 +332,7 @@ class InterfazRegistroSesion(InterfazBase):
         frame_botones = ttk.Frame(form)
 
         frame_botones.grid(
-            row=9,
+            row=11,
             column=1,
             sticky="e",
             pady=15,
@@ -294,6 +349,15 @@ class InterfazRegistroSesion(InterfazBase):
 
         ttk.Button(
             frame_botones,
+            text="Actualizar rutina",
+            command=self._cargar_rutina_activa,
+        ).pack(
+            side="left",
+            padx=5,
+        )
+
+        ttk.Button(
+            frame_botones,
             text="Limpiar",
             command=self.cancelarRegistro,
         ).pack(
@@ -301,219 +365,354 @@ class InterfazRegistroSesion(InterfazBase):
             padx=5,
         )
 
-    def _obtener_texto(
-        self,
-        nombre_atributo: str,
-    ) -> str:
+    def _cargar_rutina_activa(self) -> None:
         """
-        Obtiene texto de un widget si existe.
+        Busca la asignación activa del cliente y carga los
+        ejercicios activos de su rutina individual.
+        """
+        try:
+            asignacion = (
+                self.controlador
+                .asignacion_dao
+                .buscar_activa(
+                    self._id_cliente
+                )
+            )
 
-        Las pruebas unitarias antiguas solo incluyen
-        algunos widgets, por eso los campos opcionales
-        se tratan como texto vacío cuando no existen.
+            if asignacion is None:
+                self._id_asignacion = None
+                self._id_rutina = None
+                self._ejercicios_asignados = []
+                self._ejercicio_asignado_actual = None
+
+                self._cb_ejercicio["values"] = []
+                self._cb_ejercicio.set("")
+
+                self._lbl_rutina.config(
+                    text=(
+                        "Rutina asignada: el cliente no "
+                        "tiene una rutina activa."
+                    )
+                )
+
+                self._limpiar_datos_ejercicio()
+                return
+
+            self._id_asignacion = (
+                asignacion.id_asignacion
+            )
+
+            self._id_rutina = asignacion.id_rutina
+
+            estado = getattr(
+                asignacion.estado,
+                "value",
+                str(asignacion.estado),
+            )
+
+            self._lbl_rutina.config(
+                text=(
+                    f"Rutina asignada: "
+                    f"{asignacion.id_rutina} | "
+                    f"Asignación: "
+                    f"{asignacion.id_asignacion} | "
+                    f"Estado: {estado}"
+                )
+            )
+
+            progreso = (
+                self.controlador
+                .asignacion_ejercicio_dao
+                .obtener_progreso(
+                    id_asignacion=(
+                        asignacion.id_asignacion
+                    ),
+                    solo_activos=True,
+                )
+            )
+
+            self._ejercicios_asignados = list(progreso)
+
+            valores_combo = [
+                (
+                    f"{fila['id_asignacion_ejercicio']} - "
+                    f"{fila['nombre_ejercicio']}"
+                )
+                for fila in self._ejercicios_asignados
+            ]
+
+            self._cb_ejercicio["values"] = valores_combo
+            self._cb_ejercicio.set("")
+
+            self._ejercicio_asignado_actual = None
+            self._limpiar_datos_ejercicio()
+
+            if not valores_combo:
+                self._lbl_mensaje.config(
+                    text=(
+                        "La rutina activa no tiene "
+                        "ejercicios disponibles."
+                    ),
+                    foreground="#b00020",
+                )
+
+            else:
+                self._lbl_mensaje.config(
+                    text=(
+                        "Seleccione un ejercicio de su "
+                        "rutina y registre la cantidad "
+                        "realizada."
+                    ),
+                    foreground="#555555",
+                )
+
+        except Exception as error:
+            self.mostrar_error(
+                (
+                    "No se pudo cargar la rutina activa: "
+                    f"{error}"
+                )
+            )
+
+    def _seleccionar_ejercicio(
+        self,
+        _evento=None,
+    ) -> None:
         """
-        widget = getattr(
-            self,
-            nombre_atributo,
+        Carga la meta, cantidad acumulada y cantidad
+        restante del ejercicio seleccionado.
+        """
+        valor = self._cb_ejercicio.get().strip()
+
+        if not valor:
+            self._ejercicio_asignado_actual = None
+            self._limpiar_datos_ejercicio()
+            return
+
+        try:
+            id_asignacion_ejercicio = int(
+                valor.split(
+                    "-",
+                    1,
+                )[0].strip()
+            )
+
+        except (
+            ValueError,
+            IndexError,
+        ):
+            self._ejercicio_asignado_actual = None
+            self._limpiar_datos_ejercicio()
+            return
+
+        fila_seleccionada = next(
+            (
+                fila
+                for fila in self._ejercicios_asignados
+                if int(
+                    fila[
+                        "id_asignacion_ejercicio"
+                    ]
+                )
+                == id_asignacion_ejercicio
+            ),
             None,
         )
 
-        if widget is None:
-            return ""
+        if fila_seleccionada is None:
+            self._ejercicio_asignado_actual = None
+            self._limpiar_datos_ejercicio()
+            return
 
-        return widget.get().strip()
-
-    def _es_modo_compatibilidad_tests(self) -> bool:
-        """
-        Detecta una instancia parcial creada por pruebas.
-
-        En la aplicación real siempre existen los campos
-        de nombre y repeticiones creados por el formulario.
-        """
-        return not all(
-            hasattr(
-                self,
-                atributo,
-            )
-            for atributo in (
-                "_ent_nombre_ejercicio",
-                "_ent_veces_planificadas",
-                "_ent_veces_realizadas",
-                "_id_rutina",
-            )
+        meta = int(
+            fila_seleccionada[
+                "veces_planificadas"
+            ]
         )
+
+        realizadas = int(
+            fila_seleccionada[
+                "veces_realizadas"
+            ]
+        )
+
+        restantes = max(
+            meta - realizadas,
+            0,
+        )
+
+        self._ejercicio_asignado_actual = (
+            fila_seleccionada
+        )
+
+        self._lbl_meta_total.config(
+            text=str(meta)
+        )
+
+        self._lbl_veces_realizadas.config(
+            text=str(realizadas)
+        )
+
+        self._lbl_veces_restantes.config(
+            text=str(restantes)
+        )
+
+        self._ent_veces_realizadas.delete(
+            0,
+            tk.END,
+        )
+
+        if restantes == 0:
+            self._lbl_mensaje.config(
+                text=(
+                    "Este ejercicio ya alcanzó su meta. "
+                    "Seleccione otro ejercicio."
+                ),
+                foreground="#1b5e20",
+            )
+
+        else:
+            self._lbl_mensaje.config(
+                text=(
+                    "Puede registrar entre 1 y "
+                    f"{restantes} repetición(es)."
+                ),
+                foreground="#555555",
+            )
 
     def registrarSesion(self) -> None:
         """
-        Valida y registra la sesión.
+        Registra una sesión vinculada al ejercicio asignado
+        seleccionado por el cliente.
         """
-        nombre_ejercicio = self._obtener_texto(
-            "_ent_nombre_ejercicio"
+        if self._id_asignacion is None:
+            self.mostrar_error(
+                "No tiene una rutina activa para registrar."
+            )
+            return
+
+        if self._ejercicio_asignado_actual is None:
+            self.mostrar_error(
+                "Seleccione un ejercicio de su rutina."
+            )
+            return
+
+        duracion_texto = (
+            self._ent_duracion.get().strip()
         )
 
-        duracion_texto = self._obtener_texto(
-            "_ent_duracion"
+        intensidad = self._cb_intensidad.get().strip()
+
+        realizadas_texto = (
+            self._ent_veces_realizadas.get().strip()
         )
 
-        intensidad = self._obtener_texto(
-            "_cb_intensidad"
+        observaciones = (
+            self._ent_observaciones.get().strip()
         )
-
-        calorias_texto = self._obtener_texto(
-            "_ent_calorias"
-        )
-
-        planificadas_texto = self._obtener_texto(
-            "_ent_veces_planificadas"
-        )
-
-        realizadas_texto = self._obtener_texto(
-            "_ent_veces_realizadas"
-        )
-
-        observaciones = self._obtener_texto(
-            "_ent_observaciones"
-        )
-
-        modo_compatibilidad = (
-            self._es_modo_compatibilidad_tests()
-        )
-
-        if not modo_compatibilidad:
-            if not nombre_ejercicio:
-                self.mostrar_error(
-                    "El nombre del ejercicio "
-                    "es obligatorio."
-                )
-                return
-
-            if len(nombre_ejercicio) > 100:
-                self.mostrar_error(
-                    "El nombre del ejercicio no puede "
-                    "superar 100 caracteres."
-                )
-                return
 
         if (
             not duracion_texto
             or not intensidad
-            or not calorias_texto
+            or not realizadas_texto
         ):
             self.mostrar_error(
-                "Los campos Duracion, Intensidad y "
-                "Calorias son obligatorios."
+                (
+                    "Complete duración, intensidad "
+                    "y cantidad realizada."
+                )
             )
             return
-
-        if not modo_compatibilidad:
-            if (
-                not planificadas_texto
-                or not realizadas_texto
-            ):
-                self.mostrar_error(
-                    "Complete duración, intensidad, "
-                    "calorías, veces planificadas "
-                    "y veces realizadas."
-                )
-                return
 
         try:
             duracion = int(duracion_texto)
-            calorias = float(calorias_texto)
 
-            if not modo_compatibilidad:
-                veces_planificadas = int(
-                    planificadas_texto
-                )
-                veces_realizadas = int(
-                    realizadas_texto
-                )
-
-        except ValueError:
-            self.mostrar_error(
-                "Duracion debe ser entero y "
-                "Calorias decimal."
+            veces_realizadas = int(
+                realizadas_texto
             )
-            return
 
-        if duracion <= 0:
-            self.mostrar_error(
-                "La duración debe ser mayor que cero."
+            if duracion <= 0:
+                raise ValueError(
+                    "La duración debe ser mayor que cero."
+                )
+
+            if veces_realizadas <= 0:
+                raise ValueError(
+                    "La cantidad realizada debe ser "
+                    "mayor que cero."
+                )
+
+            meta = int(
+                self._ejercicio_asignado_actual[
+                    "veces_planificadas"
+                ]
             )
-            return
 
-        if calorias < 0:
-            self.mostrar_error(
-                "Las calorías no pueden ser negativas."
+            acumuladas = int(
+                self._ejercicio_asignado_actual[
+                    "veces_realizadas"
+                ]
             )
-            return
 
-        if not modo_compatibilidad:
-            if veces_planificadas <= 0:
-                self.mostrar_error(
-                    "Las veces planificadas deben "
-                    "ser mayores que cero."
-                )
-                return
+            restantes = meta - acumuladas
 
-            if veces_realizadas < 0:
-                self.mostrar_error(
-                    "Las veces realizadas no pueden "
-                    "ser negativas."
-                )
-                return
-
-            if veces_realizadas > veces_planificadas:
-                self.mostrar_error(
-                    "Las veces realizadas no pueden "
-                    "superar las planificadas."
-                )
-                return
-
-        try:
-            if modo_compatibilidad:
-                self.controlador.registrar_sesion(
-                    id_cliente=self._id_cliente,
-                    duracion_real=duracion,
-                    intensidad_real=intensidad,
-                    calorias_quemadas=calorias,
-                    observaciones=observaciones,
-                    fecha=date.today(),
+            if veces_realizadas > restantes:
+                raise ValueError(
+                    (
+                        "No puede registrar más de "
+                        f"{restantes} vez/veces, porque "
+                        "esa es la cantidad restante "
+                        "para completar el ejercicio."
+                    )
                 )
 
-                self.mostrar_mensaje(
-                    "Sesion registrada exitosamente."
-                )
+            nombre_ejercicio = (
+                self._ejercicio_asignado_actual[
+                    "nombre_ejercicio"
+                ]
+            )
 
-            else:
-                sesion = self.controlador.registrar_sesion(
-                    cliente=self._id_cliente,
-                    rutina=self._id_rutina,
-                    fecha=date.today(),
-                    nombre_ejercicio=nombre_ejercicio,
-                    duracion_real=duracion,
-                    intensidad_real=intensidad,
-                    calorias_quemadas=calorias,
-                    observaciones=observaciones,
-                    veces_planificadas=veces_planificadas,
-                    veces_realizadas=veces_realizadas,
-                )
+            id_asignacion_ejercicio = int(
+                self._ejercicio_asignado_actual[
+                    "id_asignacion_ejercicio"
+                ]
+            )
 
-                estado = (
-                    "completada"
-                    if sesion.completada
-                    else "pendiente"
-                )
+            sesion = self.controlador.registrar_sesion(
+                cliente=self._id_cliente,
+                rutina=self._id_rutina,
+                fecha=date.today(),
+                nombre_ejercicio=nombre_ejercicio,
+                duracion_real=duracion,
+                intensidad_real=intensidad,
+                observaciones=observaciones,
+                veces_planificadas=restantes,
+                veces_realizadas=veces_realizadas,
+                id_asignacion_ejercicio=(
+                    id_asignacion_ejercicio
+                ),
+            )
 
-                self.mostrar_mensaje(
-                    "Sesión registrada correctamente.\n"
-                    f"Estado: {estado}\n"
-                    f"Cumplimiento: "
-                    f"{sesion.veces_realizadas}/"
-                    f"{sesion.veces_planificadas}"
-                )
+            estado = (
+                "completada"
+                if sesion.completada
+                else "pendiente"
+            )
+
+            self.mostrar_mensaje(
+                "Sesión registrada correctamente.\n"
+                f"Ejercicio: {nombre_ejercicio}\n"
+                f"Estado de la sesión: {estado}\n"
+                f"Calorías estimadas: "
+                f"{sesion.calorias_quemadas:.2f} kcal\n"
+                f"Registrado ahora: "
+                f"{sesion.veces_realizadas}\n"
+                f"Restaban antes del registro: "
+                f"{restantes}"
+            )
 
             self.cancelarRegistro()
+            self._cargar_rutina_activa()
 
         except ValueError as error:
             self.mostrar_error(str(error))
@@ -523,15 +722,29 @@ class InterfazRegistroSesion(InterfazBase):
                 f"Error inesperado: {error}"
             )
 
+    def _limpiar_datos_ejercicio(self) -> None:
+        """
+        Limpia las etiquetas relacionadas con el ejercicio
+        seleccionado.
+        """
+        self._lbl_meta_total.config(
+            text="-"
+        )
+
+        self._lbl_veces_realizadas.config(
+            text="-"
+        )
+
+        self._lbl_veces_restantes.config(
+            text="-"
+        )
+
     def cancelarRegistro(self) -> None:
         """
-        Limpia todos los campos disponibles del formulario.
+        Limpia los campos editables del formulario.
         """
         for atributo in (
-            "_ent_nombre_ejercicio",
             "_ent_duracion",
-            "_ent_calorias",
-            "_ent_veces_planificadas",
             "_ent_veces_realizadas",
             "_ent_observaciones",
         ):

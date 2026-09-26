@@ -1,7 +1,7 @@
 from typing import List
 
 import tkinter as tk
-from tkinter import ttk
+from tkinter import simpledialog, ttk
 
 from src.controladores.control_clientes import (
     ControlClientes,
@@ -338,6 +338,15 @@ class InterfazGestionClientes(InterfazBase):
             botones,
             text="Eliminar",
             command=self.eliminarCliente,
+        ).pack(
+            side="left",
+            padx=3,
+        )
+
+        ttk.Button(
+            botones,
+            text="Cambiar clave",
+            command=self.restablecerClaveCliente,
         ).pack(
             side="left",
             padx=3,
@@ -853,6 +862,102 @@ class InterfazGestionClientes(InterfazBase):
         except Exception as error:
             self.mostrar_error(
                 f"Error al eliminar: {error}"
+            )
+
+    def restablecerClaveCliente(self) -> None:
+        """
+        Permite al administrador restablecer la contraseña
+        del cliente seleccionado en la tabla.
+        """
+        seleccion = self._tree.selection()
+
+        if not seleccion:
+            self.mostrar_error(
+                (
+                    "Seleccione un cliente para cambiar "
+                    "su contraseña."
+                )
+            )
+            return
+
+        valores = self._obtener_valores_tree(
+            self._tree,
+            seleccion[0],
+        )
+
+        try:
+            id_cliente = int(valores[0])
+
+        except (
+            IndexError,
+            TypeError,
+            ValueError,
+        ):
+            self.mostrar_error(
+                "El ID del cliente no es válido."
+            )
+            return
+
+        nueva_contrasenia = simpledialog.askstring(
+            "Cambiar clave de cliente",
+            (
+                "Ingrese la nueva contraseña.\n\n"
+                "Debe tener al menos 8 caracteres, "
+                "una mayúscula, una minúscula y un número:"
+            ),
+            parent=self,
+            show="*",
+        )
+
+        if nueva_contrasenia is None:
+            return
+
+        confirmar_contrasenia = simpledialog.askstring(
+            "Cambiar clave de cliente",
+            "Confirme la nueva contraseña:",
+            parent=self,
+            show="*",
+        )
+
+        if confirmar_contrasenia is None:
+            return
+
+        if nueva_contrasenia != confirmar_contrasenia:
+            self.mostrar_error(
+                "Las contraseñas no coinciden."
+            )
+            return
+
+        if not self.confirmar_accion(
+            (
+                "¿Desea restablecer la contraseña del "
+                f"cliente con ID {id_cliente}?"
+            )
+        ):
+            return
+
+        try:
+            self._control_clientes.restablecer_contrasenia_cliente(
+                id_cliente,
+                nueva_contrasenia,
+            )
+
+            self.mostrar_mensaje(
+                (
+                    "La contraseña del cliente fue "
+                    "actualizada correctamente."
+                )
+            )
+
+        except ValueError as error:
+            self.mostrar_error(str(error))
+
+        except Exception as error:
+            self.mostrar_error(
+                (
+                    "No se pudo restablecer la "
+                    f"contraseña: {error}"
+                )
             )
 
     def buscarCliente(self) -> None:

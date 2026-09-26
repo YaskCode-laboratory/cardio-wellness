@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from decimal import Decimal
 from typing import Any, Optional
 import os
 import traceback
@@ -1287,15 +1288,26 @@ class InterfazProgreso(InterfazBase):
         valor: Any,
         predeterminado: float,
     ) -> float:
+        """
+        Convierte valores numéricos, incluido Decimal,
+        a float para mostrarlos en la interfaz.
+        """
         if isinstance(valor, bool):
             return predeterminado
 
-        if isinstance(valor, (int, float)):
+        if isinstance(
+            valor,
+            (
+                int,
+                float,
+                Decimal,
+            ),
+        ):
             return float(valor)
 
         if isinstance(valor, str):
             try:
-                return float(valor)
+                return float(valor.strip())
             except ValueError:
                 return predeterminado
 

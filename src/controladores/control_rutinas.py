@@ -2,15 +2,23 @@
 Controlador para la gestión de rutinas de entrenamiento.
 """
 
+
 from typing import List, Optional, Union
 
-from src.modelos.rutina import Rutina
+
+from src.controladores.control_base import ControlBase
+from src.modelos.asignacion_rutina_ejercicio import (
+    AsignacionRutinaEjercicio,
+)
 from src.modelos.enums import NivelRutina
-from src.persistencia.rutina_dao import RutinaDAO
+from src.modelos.rutina import Rutina
 from src.persistencia.asignacion_rutina_dao import (
     AsignacionRutinaDAO,
 )
-from src.controladores.control_base import ControlBase
+from src.persistencia.asignacion_rutina_ejercicio_dao import (
+    AsignacionRutinaEjercicioDAO,
+)
+from src.persistencia.rutina_dao import RutinaDAO
 from src.utilidades.logger import (
     log_creacion_rutina,
     log_sugerencia_rutina,
@@ -184,6 +192,9 @@ class ControlRutinas(ControlBase):
         rutina_dao: RutinaDAO,
         asignacion_dao: AsignacionRutinaDAO,
         ruta_log: str = "logs/LOG_CARDIO.txt",
+        asignacion_ejercicio_dao: Optional[
+            AsignacionRutinaEjercicioDAO
+        ] = None,
     ) -> None:
         super().__init__(ruta_log)
 
@@ -200,6 +211,12 @@ class ControlRutinas(ControlBase):
         self._rutina_dao = rutina_dao
         self._asignacion_dao = asignacion_dao
 
+        self._asignacion_ejercicio_dao = (
+            asignacion_ejercicio_dao
+            if asignacion_ejercicio_dao is not None
+            else AsignacionRutinaEjercicioDAO()
+        )
+
     @property
     def rutina_dao(self) -> RutinaDAO:
         return self._rutina_dao
@@ -209,6 +226,16 @@ class ControlRutinas(ControlBase):
         self,
     ) -> AsignacionRutinaDAO:
         return self._asignacion_dao
+
+    @property
+    def asignacion_ejercicio_dao(
+        self,
+    ) -> AsignacionRutinaEjercicioDAO:
+        """
+        Devuelve el DAO de ejercicios individualizados
+        por asignación.
+        """
+        return self._asignacion_ejercicio_dao
 
     def crear_rutina(
         self,
@@ -302,10 +329,8 @@ class ControlRutinas(ControlBase):
             creado_por=creador_id,
         )
 
-        rutina_guardada = (
-            self._rutina_dao.guardar(
-                rutina
-            )
+        rutina_guardada = self._rutina_dao.guardar(
+            rutina
         )
 
         self._registrar_log(
@@ -384,10 +409,8 @@ class ControlRutinas(ControlBase):
                 "La rutina debe tener un ID."
             )
 
-        rutina_actualizada = (
-            self._rutina_dao.actualizar(
-                rutina
-            )
+        rutina_actualizada = self._rutina_dao.actualizar(
+            rutina
         )
 
         usuario_log = (
@@ -429,10 +452,8 @@ class ControlRutinas(ControlBase):
             "El usuario de la acción",
         )
 
-        resultado = (
-            self._rutina_dao.eliminar_por_id(
-                rutina_id
-            )
+        resultado = self._rutina_dao.eliminar_por_id(
+            rutina_id
         )
 
         if resultado:
@@ -454,7 +475,7 @@ class ControlRutinas(ControlBase):
         usuario_accion: Optional[int] = None,
     ) -> bool:
         """
-        Agrega un ejercicio a una rutina.
+        Agrega un ejercicio a una rutina global.
         """
         rutina_id = _validar_id(
             id_rutina,
@@ -482,12 +503,10 @@ class ControlRutinas(ControlBase):
             "El usuario de la acción",
         )
 
-        resultado = (
-            self._rutina_dao.agregar_ejercicio(
-                id_rutina=rutina_id,
-                id_ejercicio=ejercicio_id,
-                orden_ejercicio=orden_id,
-            )
+        resultado = self._rutina_dao.agregar_ejercicio(
+            id_rutina=rutina_id,
+            id_ejercicio=ejercicio_id,
+            orden_ejercicio=orden_id,
         )
 
         if resultado:
@@ -509,7 +528,7 @@ class ControlRutinas(ControlBase):
         usuario_accion: Optional[int] = None,
     ) -> bool:
         """
-        Elimina un ejercicio de una rutina.
+        Elimina un ejercicio de una rutina global.
         """
         rutina_id = _validar_id(
             id_rutina,
@@ -532,11 +551,9 @@ class ControlRutinas(ControlBase):
             "El usuario de la acción",
         )
 
-        resultado = (
-            self._rutina_dao.eliminar_ejercicio(
-                id_rutina=rutina_id,
-                id_ejercicio=ejercicio_id,
-            )
+        resultado = self._rutina_dao.eliminar_ejercicio(
+            id_rutina=rutina_id,
+            id_ejercicio=ejercicio_id,
         )
 
         if resultado:
@@ -556,17 +573,15 @@ class ControlRutinas(ControlBase):
         id_rutina: int,
     ) -> list:
         """
-        Devuelve los ejercicios de una rutina.
+        Devuelve los ejercicios de una rutina global.
         """
         rutina_id = _validar_id(
             id_rutina,
             "El ID de la rutina",
         )
 
-        return (
-            self._rutina_dao.listar_ejercicios(
-                rutina_id
-            )
+        return self._rutina_dao.listar_ejercicios(
+            rutina_id
         )
 
     def obtener_ejercicios_de_rutina(
@@ -586,8 +601,7 @@ class ControlRutinas(ControlBase):
         id_ejercicio: int,
     ) -> bool:
         """
-        Comprueba si un ejercicio pertenece
-        a una rutina.
+        Comprueba si un ejercicio pertenece a una rutina.
         """
         rutina_id = _validar_id(
             id_rutina,
@@ -611,15 +625,12 @@ class ControlRutinas(ControlBase):
                 ejercicio_id,
             )
 
-        ejercicios = (
-            self._rutina_dao.listar_ejercicios(
-                rutina_id
-            )
+        ejercicios = self._rutina_dao.listar_ejercicios(
+            rutina_id
         )
 
         return any(
-            ejercicio.id_ejercicio
-            == ejercicio_id
+            ejercicio.id_ejercicio == ejercicio_id
             for ejercicio in ejercicios
         )
 
@@ -632,6 +643,11 @@ class ControlRutinas(ControlBase):
     ) -> dict:
         """
         Asigna una rutina a un cliente.
+
+        Si el cliente posee una asignación activa, finaliza
+        la asignación anterior. Luego crea la nueva
+        asignación y copia los ejercicios de la plantilla
+        global al plan individual del cliente.
         """
         id_cliente = self._obtener_id_objeto(
             cliente,
@@ -661,6 +677,15 @@ class ControlRutinas(ControlBase):
                 "Las observaciones deben ser texto."
             )
 
+        rutina_existente = self._rutina_dao.buscar_por_id(
+            id_rutina
+        )
+
+        if rutina_existente is None:
+            raise ValueError(
+                "La rutina seleccionada no existe."
+            )
+
         asignacion_activa = (
             self._asignacion_dao
             .obtener_activa_por_cliente(
@@ -668,23 +693,30 @@ class ControlRutinas(ControlBase):
             )
         )
 
-        if asignacion_activa:
-            (
-                self._asignacion_dao
-                .finalizar_asignacion(
-                    asignacion_activa.id_asignacion
-                )
+        if asignacion_activa is not None:
+            self._asignacion_dao.finalizar_asignacion(
+                asignacion_activa.id_asignacion
             )
 
-        resultado = (
-            self._asignacion_dao.asignar(
-                id_cliente=id_cliente,
-                id_rutina=id_rutina,
-                asignado_por=usuario_id,
-                observaciones=(
-                    observaciones.strip()
-                ),
+        resultado = self._asignacion_dao.asignar(
+            id_cliente=id_cliente,
+            id_rutina=id_rutina,
+            asignado_por=usuario_id,
+            observaciones=observaciones.strip(),
+        )
+
+        id_asignacion = resultado.get(
+            "id_asignacion"
+        )
+
+        if id_asignacion is None:
+            raise RuntimeError(
+                "No se recibió el ID de la asignación creada."
             )
+
+        self._asignacion_ejercicio_dao.copiar_desde_rutina(
+            id_asignacion=id_asignacion,
+            id_rutina=id_rutina,
         )
 
         self._registrar_log(
@@ -692,11 +724,415 @@ class ControlRutinas(ControlBase):
             (
                 "ASIGNACION_RUTINA "
                 f"Cliente: {id_cliente}, "
-                f"Rutina: {id_rutina}"
+                f"Rutina: {id_rutina}, "
+                f"Asignacion: {id_asignacion}"
             ),
         )
 
         return resultado
+
+    def cambiar_rutina_asignada(
+        self,
+        id_cliente: int,
+        id_nueva_rutina: int,
+        usuario_accion: int,
+        observaciones: str = "",
+    ) -> dict:
+        """
+        Cancela la rutina activa de un cliente y asigna una
+        nueva rutina.
+
+        La rutina anterior queda CANCELADA; no se marca como
+        FINALIZADA porque el cliente no necesariamente
+        alcanzó todas las metas.
+        """
+        cliente_id = _validar_id(
+            id_cliente,
+            "El ID del cliente",
+        )
+
+        nueva_rutina_id = _validar_id(
+            id_nueva_rutina,
+            "El ID de la nueva rutina",
+        )
+
+        usuario_id = _validar_id(
+            usuario_accion,
+            "El usuario de la acción",
+        )
+
+        rutina_nueva = self._rutina_dao.buscar_por_id(
+            nueva_rutina_id
+        )
+
+        if rutina_nueva is None:
+            raise ValueError(
+                "La nueva rutina seleccionada no existe."
+            )
+
+        asignacion_activa = (
+            self._asignacion_dao
+            .obtener_activa_por_cliente(
+                cliente_id
+            )
+        )
+
+        if asignacion_activa is None:
+            raise ValueError(
+                "El cliente no tiene una rutina activa "
+                "para cambiar."
+            )
+
+        if (
+            asignacion_activa.id_rutina
+            == nueva_rutina_id
+        ):
+            raise ValueError(
+                "El cliente ya tiene asignada esa rutina."
+            )
+
+        cancelada = (
+            self._asignacion_dao
+            .cancelar_asignacion(
+                asignacion_activa.id_asignacion
+            )
+        )
+
+        if not cancelada:
+            raise RuntimeError(
+                "No se pudo cancelar la rutina activa."
+            )
+
+        resultado = self.asignar_rutina(
+            cliente=cliente_id,
+            rutina=nueva_rutina_id,
+            asignado_por=usuario_id,
+            observaciones=observaciones,
+        )
+
+        self._registrar_log(
+            str(usuario_id),
+            (
+                "CAMBIO_RUTINA_ASIGNADA "
+                f"Cliente: {cliente_id}, "
+                f"AsignacionAnterior: "
+                f"{asignacion_activa.id_asignacion}, "
+                f"RutinaAnterior: "
+                f"{asignacion_activa.id_rutina}, "
+                f"NuevaRutina: {nueva_rutina_id}, "
+                f"NuevaAsignacion: "
+                f"{resultado.get('id_asignacion')}"
+            ),
+        )
+
+        return resultado
+
+    def listar_ejercicios_de_asignacion(
+        self,
+        id_asignacion: int,
+        solo_activos: bool = False,
+    ) -> list:
+        """
+        Lista los ejercicios individualizados de una
+        asignación de rutina.
+        """
+        asignacion_id = _validar_id(
+            id_asignacion,
+            "El ID de la asignación",
+        )
+
+        if not isinstance(solo_activos, bool):
+            raise ValueError(
+                "solo_activos debe ser booleano."
+            )
+
+        asignacion = self._asignacion_dao.buscar_por_id(
+            asignacion_id
+        )
+
+        if asignacion is None:
+            raise ValueError(
+                "La asignación indicada no existe."
+            )
+
+        return (
+            self._asignacion_ejercicio_dao
+            .listar_por_asignacion(
+                id_asignacion=asignacion_id,
+                solo_activos=solo_activos,
+            )
+        )
+
+    def agregar_ejercicio_a_asignacion(
+        self,
+        id_asignacion: int,
+        id_ejercicio: int,
+        veces_planificadas: int,
+        usuario_accion: int,
+        orden: Optional[int] = None,
+    ) -> AsignacionRutinaEjercicio:
+        """
+        Agrega un ejercicio solo al plan individual de una
+        asignación activa.
+        """
+        asignacion_id = _validar_id(
+            id_asignacion,
+            "El ID de la asignación",
+        )
+
+        ejercicio_id = _validar_id(
+            id_ejercicio,
+            "El ID del ejercicio",
+        )
+
+        usuario_id = _validar_id(
+            usuario_accion,
+            "El usuario de la acción",
+        )
+
+        if (
+            isinstance(veces_planificadas, bool)
+            or not isinstance(
+                veces_planificadas,
+                int,
+            )
+            or veces_planificadas <= 0
+        ):
+            raise ValueError(
+                "Las veces planificadas deben ser un "
+                "entero mayor que cero."
+            )
+
+        asignacion = self._asignacion_dao.buscar_por_id(
+            asignacion_id
+        )
+
+        if asignacion is None:
+            raise ValueError(
+                "La asignación indicada no existe."
+            )
+
+        if asignacion.estado.value != "ACTIVA":
+            raise ValueError(
+                "Solo puede modificar una asignación "
+                "activa."
+            )
+
+        if orden is None:
+            orden = (
+                self._asignacion_ejercicio_dao
+                .obtener_siguiente_orden(
+                    asignacion_id
+                )
+            )
+        else:
+            orden = _validar_id(
+                orden,
+                "El orden del ejercicio",
+            )
+
+        ejercicio_asignado = AsignacionRutinaEjercicio(
+            id_asignacion=asignacion_id,
+            id_ejercicio=ejercicio_id,
+            orden_ejercicio=orden,
+            veces_planificadas=veces_planificadas,
+        )
+
+        resultado = (
+            self._asignacion_ejercicio_dao.guardar(
+                ejercicio_asignado
+            )
+        )
+
+        self._registrar_log(
+            str(usuario_id),
+            (
+                "AGREGAR_EJERCICIO_A_ASIGNACION "
+                f"Asignacion: {asignacion_id}, "
+                f"Ejercicio: {ejercicio_id}, "
+                f"Meta: {veces_planificadas}"
+            ),
+        )
+
+        return resultado
+
+    def actualizar_meta_ejercicio_asignado(
+        self,
+        id_asignacion_ejercicio: int,
+        veces_planificadas: int,
+        usuario_accion: int,
+    ) -> bool:
+        """
+        Modifica la meta de un ejercicio individual del
+        plan de un cliente.
+        """
+        ejercicio_asignado_id = _validar_id(
+            id_asignacion_ejercicio,
+            "El ID del ejercicio asignado",
+        )
+
+        usuario_id = _validar_id(
+            usuario_accion,
+            "El usuario de la acción",
+        )
+
+        if (
+            isinstance(veces_planificadas, bool)
+            or not isinstance(
+                veces_planificadas,
+                int,
+            )
+            or veces_planificadas <= 0
+        ):
+            raise ValueError(
+                "Las veces planificadas deben ser un "
+                "entero mayor que cero."
+            )
+
+        ejercicio_asignado = (
+            self._asignacion_ejercicio_dao.buscar_por_id(
+                ejercicio_asignado_id
+            )
+        )
+
+        if ejercicio_asignado is None:
+            raise ValueError(
+                "El ejercicio asignado no existe."
+            )
+
+        asignacion = self._asignacion_dao.buscar_por_id(
+            ejercicio_asignado.id_asignacion
+        )
+
+        if asignacion is None:
+            raise ValueError(
+                "La asignación asociada no existe."
+            )
+
+        if asignacion.estado.value != "ACTIVA":
+            raise ValueError(
+                "Solo puede modificar una asignación "
+                "activa."
+            )
+
+        resultado = (
+            self._asignacion_ejercicio_dao.actualizar_meta(
+                id_asignacion_ejercicio=(
+                    ejercicio_asignado_id
+                ),
+                veces_planificadas=veces_planificadas,
+            )
+        )
+
+        if resultado:
+            self._registrar_log(
+                str(usuario_id),
+                (
+                    "ACTUALIZAR_META_EJERCICIO_ASIGNADO "
+                    f"Asignacion: "
+                    f"{ejercicio_asignado.id_asignacion}, "
+                    f"EjercicioAsignado: "
+                    f"{ejercicio_asignado_id}, "
+                    f"NuevaMeta: {veces_planificadas}"
+                ),
+            )
+
+        return resultado
+
+    def desactivar_ejercicio_de_asignacion(
+        self,
+        id_asignacion_ejercicio: int,
+        usuario_accion: int,
+    ) -> bool:
+        """
+        Retira un ejercicio de un plan individual sin
+        eliminar su historial ni sus sesiones.
+        """
+        ejercicio_asignado_id = _validar_id(
+            id_asignacion_ejercicio,
+            "El ID del ejercicio asignado",
+        )
+
+        usuario_id = _validar_id(
+            usuario_accion,
+            "El usuario de la acción",
+        )
+
+        ejercicio_asignado = (
+            self._asignacion_ejercicio_dao.buscar_por_id(
+                ejercicio_asignado_id
+            )
+        )
+
+        if ejercicio_asignado is None:
+            raise ValueError(
+                "El ejercicio asignado no existe."
+            )
+
+        asignacion = self._asignacion_dao.buscar_por_id(
+            ejercicio_asignado.id_asignacion
+        )
+
+        if asignacion is None:
+            raise ValueError(
+                "La asignación asociada no existe."
+            )
+
+        if asignacion.estado.value != "ACTIVA":
+            raise ValueError(
+                "Solo puede modificar una asignación "
+                "activa."
+            )
+
+        resultado = (
+            self._asignacion_ejercicio_dao.desactivar(
+                ejercicio_asignado_id
+            )
+        )
+
+        if resultado:
+            self._registrar_log(
+                str(usuario_id),
+                (
+                    "DESACTIVAR_EJERCICIO_ASIGNADO "
+                    f"Asignacion: "
+                    f"{ejercicio_asignado.id_asignacion}, "
+                    f"EjercicioAsignado: "
+                    f"{ejercicio_asignado_id}"
+                ),
+            )
+
+        return resultado
+
+    def obtener_progreso_asignacion(
+        self,
+        id_asignacion: int,
+    ) -> list:
+        """
+        Devuelve el progreso de los ejercicios activos de
+        una asignación.
+        """
+        asignacion_id = _validar_id(
+            id_asignacion,
+            "El ID de la asignación",
+        )
+
+        asignacion = self._asignacion_dao.buscar_por_id(
+            asignacion_id
+        )
+
+        if asignacion is None:
+            raise ValueError(
+                "La asignación indicada no existe."
+            )
+
+        return (
+            self._asignacion_ejercicio_dao
+            .obtener_progreso(
+                id_asignacion=asignacion_id,
+                solo_activos=True,
+            )
+        )
 
     def sugerir_rutina(
         self,
@@ -758,8 +1194,7 @@ class ControlRutinas(ControlBase):
         atributo: str,
     ) -> int:
         """
-        Obtiene un ID desde un entero o desde
-        un objeto.
+        Obtiene un ID desde un entero o desde un objeto.
         """
         if hasattr(
             objeto,

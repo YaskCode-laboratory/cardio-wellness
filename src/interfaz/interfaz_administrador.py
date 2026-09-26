@@ -1,7 +1,11 @@
 from typing import Optional
 
-import tkinter as tk
 from tkinter import ttk
+import tkinter as tk
+
+from src.controladores.control_progreso import (
+    ControlProgreso,
+)
 
 from src.controladores.control_clientes import (
     ControlClientes,
@@ -12,6 +16,9 @@ from src.controladores.control_ejercicios import (
 from src.controladores.control_rutinas import (
     ControlRutinas,
 )
+from src.controladores.control_sesiones import (
+    ControlSesiones,
+)
 from src.interfaz.interfaz_gestion_clientes import (
     InterfazGestionClientes,
 )
@@ -21,8 +28,16 @@ from src.interfaz.interfaz_gestion_ejercicios import (
 from src.interfaz.interfaz_gestion_rutinas import (
     InterfazGestionRutinas,
 )
+
+from src.interfaz.interfaz_rutinas_asignadas import (
+    InterfazRutinasAsignadas,
+)
+
 from src.modelos.administrador import Administrador
 
+from src.interfaz.interfaz_progreso_clientes_admin import (
+    InterfazProgresoClientesAdmin,
+)
 
 class InterfazAdministrador(tk.Tk):
     """
@@ -41,6 +56,9 @@ class InterfazAdministrador(tk.Tk):
         ] = None,
         control_ejercicios: Optional[
             ControlEjercicios
+        ] = None,
+        control_sesiones: Optional[
+            ControlSesiones
         ] = None,
         control_autenticacion: Optional[
             object
@@ -71,6 +89,11 @@ class InterfazAdministrador(tk.Tk):
                 control_ejercicios,
             )
 
+            control_sesiones = controladores.get(
+                "control_sesiones",
+                control_sesiones,
+            )
+
             control_autenticacion = controladores.get(
                 "control_auth",
                 controladores.get(
@@ -97,6 +120,7 @@ class InterfazAdministrador(tk.Tk):
                 "ControlEjercicios inicializado."
             )
 
+
         if control_autenticacion is None:
             raise ValueError(
                 "InterfazAdministrador requiere un "
@@ -107,6 +131,7 @@ class InterfazAdministrador(tk.Tk):
         self._control_clientes = control_clientes
         self._control_rutinas = control_rutinas
         self._control_ejercicios = control_ejercicios
+        self._control_sesiones = control_sesiones
         self._control_autenticacion = control_autenticacion
 
         self._controladores = {
@@ -117,7 +142,8 @@ class InterfazAdministrador(tk.Tk):
             "control_clientes": control_clientes,
             "control_rutinas": control_rutinas,
             "control_ejercicios": control_ejercicios,
-        }
+            "control_sesiones": control_sesiones,
+        } 
 
         if controladores is not None:
             self._controladores.update(controladores)
@@ -263,8 +289,10 @@ class InterfazAdministrador(tk.Tk):
 
         self.abrirGestionClientes()
         self.abrirGestionRutinas()
+        self.abrirRutinasAsignadas()
         self.abrirGestionEjercicios()
-
+        self.abrirProgresoClientes()
+        
     def abrirGestionClientes(self) -> None:
         """
         Abre la pestaña de gestión de clientes.
@@ -281,7 +309,7 @@ class InterfazAdministrador(tk.Tk):
 
     def abrirGestionRutinas(self) -> None:
         """
-        Abre la pestaña de gestión de rutinas.
+        Abre la pestaña de gestión de rutinas globales.
         """
         if self._es_modo_pruebas():
             pestania_rutinas = InterfazGestionRutinas(
@@ -306,6 +334,39 @@ class InterfazAdministrador(tk.Tk):
             text="Rutinas",
         )
 
+    def abrirRutinasAsignadas(self) -> None:
+        """
+        Abre la pestaña para consultar y administrar las
+        rutinas asignadas individualmente a clientes.
+        """
+        if self._es_modo_pruebas():
+            pestania_rutinas_asignadas = (
+                InterfazRutinasAsignadas(
+                    self._notebook,
+                    self._control_rutinas,
+                )
+            )
+
+        else:
+            pestania_rutinas_asignadas = (
+                InterfazRutinasAsignadas(
+                    master=self._notebook,
+                    control_rutinas=self._control_rutinas,
+                    control_sesiones=self._control_sesiones,
+                    control_autenticacion=(
+                        self._control_autenticacion
+                    ),
+                    control_ejercicios=(
+                        self._control_ejercicios
+                    ),
+                )
+            )
+
+        self._notebook.add(
+            pestania_rutinas_asignadas,
+            text="Rutinas asignadas",
+        )
+
     def abrirGestionEjercicios(self) -> None:
         """
         Abre la pestaña de gestión de ejercicios.
@@ -320,24 +381,41 @@ class InterfazAdministrador(tk.Tk):
             text="Ejercicios",
         )
 
+    def abrirProgresoClientes(self) -> None:
+        """
+        Abre la pestaña de consulta de progreso de clientes.
+        """
+        control_progreso = self._controladores.get(
+            "control_progreso"
+        )
+
+        if control_progreso is None:
+            raise RuntimeError(
+                "No se encontró ControlProgreso en "
+                "los controladores del sistema."
+            )
+
+        pestania_progreso = (
+            InterfazProgresoClientesAdmin(
+                self._notebook,
+                self._control_clientes,
+                control_progreso,
+            )
+        )
+
+        self._notebook.add(
+            pestania_progreso,
+            text="Progreso de clientes",
+        )
+
     def cerrarSesion(self) -> None:
         """
-        Registra LOGOUT, destruye la ventana y abre login.
+        Cierra la sesión, destruye la ventana y abre login.
         """
-        try:
-            correo = getattr(
-                self._administrador_actual,
-                "correo_electronico",
-                "",
+        if not self._es_modo_pruebas():
+            self._control_autenticacion.cerrar_sesion(
+                self._administrador_actual
             )
-
-            self._control_clientes._registrar_log(
-                str(correo),
-                "LOGOUT",
-            )
-
-        except Exception:
-            pass
 
         self.destroy()
 
@@ -349,9 +427,7 @@ class InterfazAdministrador(tk.Tk):
                 InterfazLogin,
             )
 
-            control_autenticacion = (
-                ControlAutenticacion()
-            )
+            control_autenticacion = ControlAutenticacion()
 
             app = InterfazLogin(
                 control_autenticacion

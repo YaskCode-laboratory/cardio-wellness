@@ -760,6 +760,134 @@ class UsuarioDAO:
             self._conexion._conexion.rollback()
             raise
 
+    def restablecer_contrasenia_administrador(
+        self,
+        correo_electronico: str,
+        nueva_contrasenia: str,
+    ) -> bool:
+        """
+        Restablece la contraseña de un administrador
+        identificado por su correo electrónico.
+
+        Solo actualiza usuarios cuyo tipo sea administrador.
+        """
+        correo_limpio = self._normalizar_correo(
+            correo_electronico
+        )
+
+        if (
+            not isinstance(
+                nueva_contrasenia,
+                str,
+            )
+            or not nueva_contrasenia
+        ):
+            raise ValueError(
+                "La nueva contraseña no puede estar vacía."
+            )
+
+        if not GestorSeguridad.validar_fortaleza_contrasena(
+            nueva_contrasenia
+        ):
+            raise ValueError(
+                (
+                    "La contraseña debe tener al menos "
+                    "8 caracteres, una mayúscula, un "
+                    "número y un carácter especial."
+                )
+            )
+
+        nuevo_hash = GestorSeguridad.generar_hash(
+            nueva_contrasenia
+        )
+
+        sql = """
+            UPDATE usuarios
+            SET contrasenia_hash = %s
+            WHERE LOWER(correo_electronico) = %s
+              AND LOWER(
+                CAST(tipo_usuario AS TEXT)
+              ) IN (
+                'administrador',
+                'admin'
+              )
+            RETURNING
+                id_usuario,
+                correo_electronico,
+                contrasenia_hash
+        """
+
+        try:
+            resultado = self._conexion.ejecutar_consulta(
+                sql,
+                (
+                    nuevo_hash,
+                    correo_limpio,
+                ),
+            )
+
+            if not resultado:
+                raise ValueError(
+                    (
+                        "No se encontró un administrador "
+                        "con ese correo electrónico."
+                    )
+                )
+
+            hash_guardado = resultado[0][
+                "contrasenia_hash"
+            ]
+
+            if not GestorSeguridad.verificar_contrasenia(
+                nueva_contrasenia,
+                hash_guardado,
+            ):
+                raise RuntimeError(
+                    (
+                        "No se pudo confirmar que la "
+                        "nueva contraseña fue guardada."
+                    )
+                )
+
+            return True
+
+        except Exception:
+            self._conexion._conexion.rollback()
+            raise
+
+    def listar_administradores(self) -> list:
+        """
+        Devuelve los administradores registrados.
+
+        Nunca devuelve hashes o contraseñas.
+        """
+        sql = """
+            SELECT
+                id_usuario,
+                nombre,
+                apellido,
+                correo_electronico,
+                edad,
+                fecha_registro
+            FROM usuarios
+            WHERE LOWER(
+                CAST(tipo_usuario AS TEXT)
+            ) IN (
+                'administrador',
+                'admin'
+            )
+            ORDER BY
+                fecha_registro DESC,
+                id_usuario DESC
+        """
+
+        try:
+            return self._conexion.ejecutar_consulta(sql)
+
+        except Exception:
+            self._conexion._conexion.rollback()
+            raise
+
     def eliminar_por_id(
         self,
         id_usuario: int,
