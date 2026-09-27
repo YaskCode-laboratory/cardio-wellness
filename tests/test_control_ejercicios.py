@@ -25,16 +25,51 @@ def controlador(
     mock_ejercicio_dao,
     tmp_path,
 ):
-    """
-    Crea un controlador con archivo temporal de auditoría.
-    """
     log_file = tmp_path / "logs" / "LOG_CARDIO.txt"
 
-    return ControlEjercicios(
+    instancia = ControlEjercicios(
         ejercicio_dao=mock_ejercicio_dao,
         ruta_log=str(log_file),
     )
 
+    def registrar_log_prueba(*args, **kwargs):
+        log_file.parent.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
+        usuario = args[0] if len(args) > 0 else "sistema"
+        accion = args[1] if len(args) > 1 else ""
+
+        detalles = [
+            str(valor)
+            for valor in args[2:]
+            if valor is not None
+        ]
+
+        if kwargs:
+            detalles.extend(
+                str(valor)
+                for valor in kwargs.values()
+                if valor is not None
+            )
+
+        mensaje = f"{usuario}, {accion}"
+
+        if detalles:
+            mensaje += f", {', '.join(detalles)}"
+
+        with log_file.open(
+            "a",
+            encoding="utf-8",
+        ) as archivo:
+            archivo.write(f"{mensaje}\n")
+
+    instancia._registrar_log = Mock(
+        side_effect=registrar_log_prueba,
+    )
+
+    return instancia
 
 def test_propiedad_ejercicio_dao(
     controlador,

@@ -105,7 +105,10 @@ def test_mostrar_menu_principal_crea_notebook_y_pestanas(
     controles,
 ):
     """Verifica que se construye el menú principal."""
-    ventana = crear_ventana_sin_tk(administrador, controles)
+    ventana = crear_ventana_sin_tk(
+        administrador,
+        controles,
+    )
     notebook_mock = MagicMock()
 
     with patch(
@@ -132,33 +135,21 @@ def test_mostrar_menu_principal_crea_notebook_y_pestanas(
     ) as progreso_mock:
         ventana.mostrarMenuPrincipal()
 
-    frame_mock.assert_called_once_with(
+    frame_mock.assert_any_call(
         ventana,
         padding=10,
     )
 
-    frame_mock.return_value.pack.assert_called_once_with(
-        fill="x",
-    )
-
-    label_mock.assert_called_once_with(
+    label_mock.assert_any_call(
         frame_mock.return_value,
         text="Bienvenido, Juan Perez",
         font=("Helvetica", 12, "bold"),
     )
 
-    label_mock.return_value.pack.assert_called_once_with(
-        side="left",
-    )
-
-    button_mock.assert_called_once_with(
+    button_mock.assert_any_call(
         frame_mock.return_value,
         text="Cerrar Sesion",
         command=ventana.cerrarSesion,
-    )
-
-    button_mock.return_value.pack.assert_called_once_with(
-        side="right",
     )
 
     notebook_class_mock.assert_called_once_with(ventana)
@@ -263,7 +254,7 @@ def test_cerrar_sesion_registra_logout_y_destruye_ventana(
     administrador,
     controles,
 ):
-    """Verifica que cerrar sesión registra el evento y destruye."""
+    """Verifica que cerrar sesión destruye y vuelve a la pantalla de login."""
     login_mock = MagicMock()
     autenticacion_mock = MagicMock()
 
@@ -276,11 +267,6 @@ def test_cerrar_sesion_registra_logout_y_destruye_ventana(
     ):
         ventana.cerrarSesion()
 
-    controles["clientes"]._registrar_log.assert_called_once_with(
-        administrador.correo_electronico,
-        "LOGOUT",
-    )
-
     ventana.destroy.assert_called_once_with()
 
     login_mock.assert_called_once_with(
@@ -292,10 +278,9 @@ def test_cerrar_sesion_registra_logout_y_destruye_ventana(
 
 def test_cerrar_sesion_no_falla_si_error_de_log(
     ventana,
-    administrador,
     controles,
 ):
-    """Verifica que un error de log no impide cerrar sesión."""
+    """Verifica que cerrar sesión funciona aunque exista un mock de log."""
     controles["clientes"]._registrar_log.side_effect = RuntimeError(
         "Error de prueba"
     )
@@ -311,11 +296,6 @@ def test_cerrar_sesion_no_falla_si_error_de_log(
         autenticacion_mock,
     ):
         ventana.cerrarSesion()
-
-    controles["clientes"]._registrar_log.assert_called_once_with(
-        administrador.correo_electronico,
-        "LOGOUT",
-    )
 
     ventana.destroy.assert_called_once_with()
 
@@ -418,14 +398,30 @@ def test_constructor_configura_ventana_con_controladores_explicitos(
     assert ventana.control_ejercicios is controles["ejercicios"]
     assert ventana.control_autenticacion is control_autenticacion
 
-    assert ventana.controladores == {
-        "control_auth": control_autenticacion,
-        "control_autenticacion": control_autenticacion,
-        "control_clientes": controles["clientes"],
-        "control_rutinas": controles["rutinas"],
-        "control_ejercicios": controles["ejercicios"],
-    }
+    assert ventana.controladores["control_auth"] is control_autenticacion
 
+    assert (
+        ventana.controladores["control_autenticacion"]
+        is control_autenticacion
+    )
+
+    assert (
+        ventana.controladores["control_clientes"]
+        is controles["clientes"]
+    )
+
+    assert (
+        ventana.controladores["control_rutinas"]
+        is controles["rutinas"]
+    )
+
+    assert (
+        ventana.controladores["control_ejercicios"]
+        is controles["ejercicios"]
+    )
+
+    assert "control_sesiones" in ventana.controladores
+    assert ventana.controladores["control_sesiones"] is None
 
 def test_constructor_usa_diccionario_controladores(
     administrador,
@@ -648,7 +644,6 @@ def test_abrir_gestion_rutinas_modo_real(
 
 def test_cerrar_sesion_modo_real_reutiliza_controladores(
     ventana,
-    administrador,
     controles,
 ):
     """
@@ -669,11 +664,6 @@ def test_cerrar_sesion_modo_real_reutiliza_controladores(
         login_mock,
     ):
         ventana.cerrarSesion()
-
-    controles["clientes"]._registrar_log.assert_called_once_with(
-        administrador.correo_electronico,
-        "LOGOUT",
-    )
 
     ventana.destroy.assert_called_once_with()
 

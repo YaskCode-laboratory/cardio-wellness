@@ -567,7 +567,7 @@ def test_ejecutar_actualizacion_convierte_error_a_runtime_error():
 
     with pytest.raises(
         RuntimeError,
-        match="Error al ejecutar la actualizacion",
+        match="Error al ejecutar la actualización",
     ) as error:
         conexion.ejecutar_actualizacion(
             "UPDATE clientes SET nombre = %s",
@@ -575,8 +575,8 @@ def test_ejecutar_actualizacion_convierte_error_a_runtime_error():
         )
 
     assert "fallo de actualización" in str(error.value)
-    conexion_mock.rollback.assert_called_once()
 
+    conexion_mock.rollback.assert_called_once()
 
 def test_context_manager_abre_y_cierra_conexion():
     """

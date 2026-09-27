@@ -161,9 +161,10 @@ def test_registrar_cliente_exitoso_y_auditoria(
         lambda cliente: cliente
     )
 
-    with patch(
-        "src.controladores.control_clientes.log_registro_cliente",
-    ) as mock_log_registro:
+    with patch.object(
+        controlador,
+        "_registrar_log",
+    ) as mock_log:
         cliente = controlador.registrar_cliente(
             nombre="  Carlos  ",
             apellido="  Pérez  ",
@@ -189,17 +190,11 @@ def test_registrar_cliente_exitoso_y_auditoria(
         cliente
     )
 
-    mock_log_registro.assert_called_once_with(
-        "carlos@example.com"
+    mock_log.assert_called_once_with(
+        "carlos@example.com",
+        "REGISTRO_CLIENTE",
+        "Nuevo cliente registrado",
     )
-
-    contenido_log = controlador.ruta_log.read_text(
-        encoding="utf-8"
-    )
-
-    assert "carlos@example.com" in contenido_log
-    assert "REGISTRO_CLIENTE" in contenido_log
-
 
 def test_registrar_cliente_usa_meta_si_objetivo_esta_vacio(
     controlador,
@@ -209,9 +204,10 @@ def test_registrar_cliente_usa_meta_si_objetivo_esta_vacio(
         lambda cliente: cliente
     )
 
-    with patch(
-        "src.controladores.control_clientes.log_registro_cliente",
-    ):
+    with patch.object(
+        controlador,
+        "_registrar_log",
+    ) as mock_log:
         cliente = controlador.registrar_cliente(
             nombre="Laura",
             apellido="Díaz",
@@ -227,6 +223,12 @@ def test_registrar_cliente_usa_meta_si_objetivo_esta_vacio(
 
     assert cliente.objetivo == "Mantener peso"
 
+    mock_log.assert_called_once_with(
+        "laura@example.com",
+        "REGISTRO_CLIENTE",
+        "Nuevo cliente registrado",
+    )
+
 
 def test_registrar_cliente_usa_peso_actual_como_meta(
     controlador,
@@ -236,9 +238,10 @@ def test_registrar_cliente_usa_peso_actual_como_meta(
         lambda cliente: cliente
     )
 
-    with patch(
-        "src.controladores.control_clientes.log_registro_cliente",
-    ):
+    with patch.object(
+        controlador,
+        "_registrar_log",
+    ) as mock_log:
         cliente = controlador.registrar_cliente(
             nombre="Laura",
             apellido="Díaz",
@@ -251,6 +254,12 @@ def test_registrar_cliente_usa_peso_actual_como_meta(
         )
 
     assert cliente.peso_objetivo == 70
+
+    mock_log.assert_called_once_with(
+        "laura@example.com",
+        "REGISTRO_CLIENTE",
+        "Nuevo cliente registrado",
+    )
 
 
 @pytest.mark.parametrize(
@@ -531,9 +540,13 @@ def test_actualizar_cliente_exitoso(
 
     mock_cliente_dao.actualizar.return_value = cliente_valido
 
-    resultado = controlador.actualizar_cliente(
-        cliente_valido
-    )
+    with patch.object(
+        controlador,
+        "_registrar_log",
+    ) as mock_log:
+        resultado = controlador.actualizar_cliente(
+            cliente_valido
+        )
 
     assert resultado is cliente_valido
     assert cliente_valido.genero == "MUJER"
@@ -542,12 +555,10 @@ def test_actualizar_cliente_exitoso(
         cliente_valido
     )
 
-    contenido_log = controlador.ruta_log.read_text(
-        encoding="utf-8"
+    mock_log.assert_called_once_with(
+        "carlos@example.com",
+        "ACTUALIZACION_CLIENTE",
     )
-
-    assert "ACTUALIZACION_CLIENTE" in contenido_log
-
 
 @pytest.mark.parametrize(
     "cliente",
@@ -677,13 +688,16 @@ def test_registrar_actualizacion_peso_exitoso_y_auditoria(
     mock_cliente_dao.buscar_por_id.return_value = (
         cliente_valido
     )
-
     mock_cliente_dao.actualizar.return_value = cliente_valido
 
-    resultado = controlador.registrar_actualizacion_peso(
-        10,
-        Decimal("72.5"),
-    )
+    with patch.object(
+        controlador,
+        "_registrar_log",
+    ) as mock_log:
+        resultado = controlador.registrar_actualizacion_peso(
+            10,
+            Decimal("72.5"),
+        )
 
     assert resultado is cliente_valido
     assert cliente_valido.peso == Decimal("72.5")
@@ -691,17 +705,14 @@ def test_registrar_actualizacion_peso_exitoso_y_auditoria(
     mock_cliente_dao.buscar_por_id.assert_called_once_with(
         10
     )
-
     mock_cliente_dao.actualizar.assert_called_once_with(
         cliente_valido
     )
 
-    contenido_log = controlador.ruta_log.read_text(
-        encoding="utf-8"
+    mock_log.assert_called_once_with(
+        "CLIENTE_10",
+        "ACTUALIZACION_PESO",
     )
-
-    assert "CLIENTE_10" in contenido_log
-    assert "ACTUALIZACION_PESO" in contenido_log
 
 
 @pytest.mark.parametrize(
@@ -849,7 +860,11 @@ def test_eliminar_cliente_y_auditoria(
 ):
     mock_cliente_dao.eliminar_por_id.return_value = True
 
-    resultado = controlador.eliminar_cliente(5)
+    with patch.object(
+        controlador,
+        "_registrar_log",
+    ) as mock_log:
+        resultado = controlador.eliminar_cliente(5)
 
     assert resultado is True
 
@@ -857,12 +872,10 @@ def test_eliminar_cliente_y_auditoria(
         5
     )
 
-    contenido_log = controlador.ruta_log.read_text(
-        encoding="utf-8"
+    mock_log.assert_called_once_with(
+        "ID_5",
+        "ELIMINACION_CLIENTE",
     )
-
-    assert "ID_5" in contenido_log
-    assert "ELIMINACION_CLIENTE" in contenido_log
 
 
 @pytest.mark.parametrize(
@@ -941,9 +954,10 @@ def test_consultar_progreso_exitoso_y_auditoria(
         "peso_objetivo": 65,
     }
 
-    with patch(
-        "src.controladores.control_clientes.log_consulta_progreso",
-    ) as mock_log_consulta:
+    with patch.object(
+        controlador,
+        "_registrar_log",
+    ) as mock_log:
         resultado = controlador.consultar_progreso(10)
 
     assert resultado == {
@@ -955,15 +969,11 @@ def test_consultar_progreso_exitoso_y_auditoria(
         10
     )
 
-    mock_log_consulta.assert_called_once_with(
-        "CLIENTE_10"
+    mock_log.assert_called_once_with(
+        "CLIENTE_10",
+        "CONSULTA_PROGRESO",
+        "Cliente consultó su progreso",
     )
-
-    contenido_log = controlador.ruta_log.read_text(
-        encoding="utf-8"
-    )
-
-    assert "CONSULTA_PROGRESO" in contenido_log
 
 
 def test_generar_progreso_mensual_exitoso_y_auditoria(
@@ -975,9 +985,10 @@ def test_generar_progreso_mensual_exitoso_y_auditoria(
         "cumplimiento": 80,
     }
 
-    with patch(
-        "src.controladores.control_clientes.log_generar_progreso",
-    ) as mock_log_progreso:
+    with patch.object(
+        controlador,
+        "_registrar_log",
+    ) as mock_log:
         resultado = controlador.generar_progreso_mensual(10)
 
     assert resultado == {
@@ -989,15 +1000,11 @@ def test_generar_progreso_mensual_exitoso_y_auditoria(
         10
     )
 
-    mock_log_progreso.assert_called_once_with(
-        "CLIENTE_10"
+    mock_log.assert_called_once_with(
+        "CLIENTE_10",
+        "GENERAR_PROGRESO",
+        "Se generó reporte de progreso",
     )
-
-    contenido_log = controlador.ruta_log.read_text(
-        encoding="utf-8"
-    )
-
-    assert "GENERAR_PROGRESO" in contenido_log
 
 
 def test_calcular_diferencia_peso_exitoso_y_auditoria(
@@ -1006,10 +1013,10 @@ def test_calcular_diferencia_peso_exitoso_y_auditoria(
 ):
     mock_cliente_dao.calcular_diferencia_peso.return_value = 5.5
 
-    with patch(
-        "src.controladores.control_clientes."
-        "log_calculo_diferencia_peso",
-    ) as mock_log_diferencia:
+    with patch.object(
+        controlador,
+        "_registrar_log",
+    ) as mock_log:
         resultado = controlador.calcular_diferencia_peso(10)
 
     assert resultado == 5.5
@@ -1018,18 +1025,11 @@ def test_calcular_diferencia_peso_exitoso_y_auditoria(
         10
     )
 
-    mock_log_diferencia.assert_called_once_with(
+    mock_log.assert_called_once_with(
         "CLIENTE_10",
-        5.5,
+        "CALCULO_DIFERENCIA_PESO",
+        "DIF: 5.5",
     )
-
-    contenido_log = controlador.ruta_log.read_text(
-        encoding="utf-8"
-    )
-
-    assert "CALCULO_DIFERENCIA_PESO" in contenido_log
-    assert "DIF: 5.5" in contenido_log
-
 
 @pytest.mark.parametrize(
     "valor",

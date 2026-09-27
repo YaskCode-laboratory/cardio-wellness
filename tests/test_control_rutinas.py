@@ -24,18 +24,48 @@ def mock_asignacion_dao():
 
 
 @pytest.fixture
+def mock_asignacion_ejercicio_dao():
+    return Mock()
+
+
+@pytest.fixture
 def controlador(
     mock_rutina_dao,
     mock_asignacion_dao,
+    mock_asignacion_ejercicio_dao,
     tmp_path,
 ):
     log_file = tmp_path / "logs" / "LOG_CARDIO.txt"
 
-    return ControlRutinas(
+    instancia = ControlRutinas(
         rutina_dao=mock_rutina_dao,
         asignacion_dao=mock_asignacion_dao,
+        asignacion_ejercicio_dao=mock_asignacion_ejercicio_dao,
         ruta_log=str(log_file),
     )
+
+    def registrar_log_prueba(usuario, accion, detalle=None):
+        log_file.parent.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
+        mensaje = f"{usuario}, {accion}"
+
+        if detalle is not None:
+            mensaje += f", {detalle}"
+
+        with log_file.open(
+            "a",
+            encoding="utf-8",
+        ) as archivo:
+            archivo.write(f"{mensaje}\n")
+
+    instancia._registrar_log = Mock(
+        side_effect=registrar_log_prueba,
+    )
+
+    return instancia
 
 
 @pytest.fixture
@@ -92,9 +122,7 @@ def test_convertir_nivel_acepta_texto_valido(
         "NINGUNO",
     ],
 )
-def test_convertir_nivel_rechaza_valores_invalidos(
-    valor,
-):
+def test_convertir_nivel_rechaza_valores_invalidos(valor):
     with pytest.raises(ValueError):
         _convertir_nivel(valor)
 
@@ -136,9 +164,7 @@ def test_validar_id_acepta_enteros_positivos(
         {},
     ],
 )
-def test_validar_id_rechaza_valores_invalidos(
-    valor,
-):
+def test_validar_id_rechaza_valores_invalidos(valor):
     with pytest.raises(
         ValueError,
         match="debe ser un entero positivo",
@@ -300,9 +326,7 @@ def test_crear_rutina_exitoso_y_auditoria(
     controlador,
     mock_rutina_dao,
 ):
-    mock_rutina_dao.guardar.side_effect = (
-        lambda rutina: rutina
-    )
+    mock_rutina_dao.guardar.side_effect = lambda rutina: rutina
 
     rutina = controlador.crear_rutina(
         nombre="  Fuerza Básica  ",
@@ -374,13 +398,10 @@ def test_buscar_por_id_y_alias(
     controlador,
     mock_rutina_dao,
 ):
-    mock_rutina_dao.buscar_por_id.return_value = (
-        "rutina_mock"
-    )
+    mock_rutina_dao.buscar_por_id.return_value = "rutina_mock"
 
     assert controlador.buscar_por_id(1) == "rutina_mock"
     assert controlador.obtener_por_id(1) == "rutina_mock"
-
     assert mock_rutina_dao.buscar_por_id.call_count == 2
 
     with pytest.raises(ValueError):
@@ -395,7 +416,6 @@ def test_listar_y_alias(
 
     assert controlador.listar() == ["r1", "r2"]
     assert controlador.listar_rutinas() == ["r1", "r2"]
-
     assert mock_rutina_dao.listar.call_count == 2
 
 
@@ -409,7 +429,6 @@ def test_actualizar_rutina_con_creador_como_usuario(
     resultado = controlador.actualizar_rutina(rutina_valida)
 
     assert resultado is rutina_valida
-
     mock_rutina_dao.actualizar.assert_called_once_with(
         rutina_valida,
     )
@@ -503,7 +522,6 @@ def test_eliminar_rutina_sin_eliminacion_no_registra_log(
     )
 
     assert resultado is False
-
     assert not controlador.ruta_log.exists()
 
 
@@ -675,7 +693,10 @@ def test_listar_ejercicios_y_alias(
     controlador,
     mock_rutina_dao,
 ):
-    ejercicios = ["ejercicio_1", "ejercicio_2"]
+    ejercicios = [
+        "ejercicio_1",
+        "ejercicio_2",
+    ]
 
     mock_rutina_dao.listar_ejercicios.return_value = ejercicios
 
@@ -787,9 +808,7 @@ def test_asignar_rutina_sin_activa_y_con_ids(
     controlador,
     mock_asignacion_dao,
 ):
-    mock_asignacion_dao.obtener_activa_por_cliente.return_value = (
-        None
-    )
+    mock_asignacion_dao.obtener_activa_por_cliente.return_value = None
 
     mock_asignacion_dao.asignar.return_value = {
         "id_asignacion": 70,
@@ -870,9 +889,7 @@ def test_sugerir_rutina_exitoso(
 ):
     rutina_sugerida = Mock()
 
-    mock_rutina_dao.sugerir_rutina.return_value = (
-        rutina_sugerida
-    )
+    mock_rutina_dao.sugerir_rutina.return_value = rutina_sugerida
 
     resultado = controlador.sugerir_rutina(
         id_cliente=4,

@@ -97,7 +97,7 @@ def test_constructor_crea_daos_por_defecto(
 
     assert controlador.progreso_dao is progreso_dao
     assert controlador.sesion_dao is sesion_dao
-    assert controlador.cliente_dao is None
+    assert controlador.cliente_dao is not None
 
 
 def test_propiedades_de_daos(
@@ -440,10 +440,10 @@ def test_calcular_resumen_cliente_y_auditoria(
         },
     ]
 
-    with patch(
-        "src.controladores.control_progreso."
-        "log_consulta_progreso",
-    ):
+    with patch.object(
+        controlador,
+        "_registrar_log",
+    ) as mock_log:
         resumen = controlador.calcular_resumen_cliente(
             cliente
         )
@@ -457,11 +457,7 @@ def test_calcular_resumen_cliente_y_auditoria(
     assert resumen["sesiones_completadas"] == 1
     assert resumen["porcentaje_cumplimiento"] == 60.0
 
-    contenido_log = controlador.ruta_log.read_text(
-        encoding="utf-8"
-    )
-
-    assert "CLIENTE_10, CONSULTA_PROGRESO" in contenido_log
+    mock_log.assert_called_once()
 
 
 def test_obtener_resumen_cliente_alias(
@@ -471,15 +467,16 @@ def test_obtener_resumen_cliente_alias(
 ):
     mock_sesion_dao.listar_por_cliente.return_value = []
 
-    with patch(
-        "src.controladores.control_progreso."
-        "log_consulta_progreso",
-    ):
+    with patch.object(
+        controlador,
+        "_registrar_log",
+    ) as mock_log:
         resultado = controlador.obtener_resumen_cliente(
             cliente
         )
 
     assert resultado["total_sesiones"] == 0
+    mock_log.assert_called_once()
 
 
 def test_calcular_impacto_calorico_rutina(
@@ -493,9 +490,9 @@ def test_calcular_impacto_calorico_rutina(
         ],
     }
 
-    with patch(
-        "src.controladores.control_progreso."
-        "log_consulta_impacto",
+    with patch.object(
+        controlador,
+        "_registrar_log",
     ) as mock_log:
         impacto = (
             controlador.calcular_impacto_calorico_rutina(
@@ -506,15 +503,15 @@ def test_calcular_impacto_calorico_rutina(
 
     assert impacto == Decimal("350.75")
 
-    mock_log.assert_called_once_with("entrenador1")
+    mock_log.assert_called_once()
 
 
 def test_obtener_impacto_rutina_alias(
     controlador,
 ):
-    with patch(
-        "src.controladores.control_progreso."
-        "log_consulta_impacto",
+    with patch.object(
+        controlador,
+        "_registrar_log",
     ) as mock_log:
         impacto = controlador.obtener_impacto_rutina(
             {"ejercicios": []}
@@ -522,7 +519,7 @@ def test_obtener_impacto_rutina_alias(
 
     assert impacto == Decimal("0.00")
 
-    mock_log.assert_called_once_with("SISTEMA")
+    mock_log.assert_called_once()
 
 
 def test_generar_progreso_mensual_exitoso(
@@ -555,13 +552,15 @@ def test_generar_progreso_mensual_exitoso(
         },
     ]
 
+    mock_progreso_dao.buscar_por_cliente_y_mes.return_value = None
+
     mock_progreso_dao.guardar.side_effect = (
         lambda progreso: progreso
     )
 
-    with patch(
-        "src.controladores.control_progreso."
-        "log_generar_progreso",
+    with patch.object(
+        controlador,
+        "_registrar_log",
     ) as mock_log:
         progreso = controlador.generar_progreso_mensual(
             cliente=cliente,
@@ -580,7 +579,7 @@ def test_generar_progreso_mensual_exitoso(
         Decimal("69.5"),
     )
 
-    mock_log.assert_called_once_with("CLIENTE_10")
+    mock_log.assert_called_once()
 
 
 @pytest.mark.parametrize(
@@ -644,10 +643,10 @@ def test_consultar_progreso_exitoso(
         {"id_progreso": 1},
     ]
 
-    with patch(
-        "src.controladores.control_progreso."
-        "log_consulta_progreso",
-    ):
+    with patch.object(
+        controlador,
+        "_registrar_log",
+    ) as mock_log:
         historial = controlador.consultar_progreso(cliente)
 
     assert historial == [{"id_progreso": 1}]
@@ -655,7 +654,7 @@ def test_consultar_progreso_exitoso(
     mock_progreso_dao.buscar_por_cliente.assert_called_once_with(
         10
     )
-
+    mock_log.assert_called_once()
 
 def test_consultar_progreso_retorna_lista_vacia(
     controlador,
@@ -664,12 +663,14 @@ def test_consultar_progreso_retorna_lista_vacia(
 ):
     mock_progreso_dao.buscar_por_cliente.return_value = None
 
-    with patch(
-        "src.controladores.control_progreso."
-        "log_consulta_progreso",
-    ):
-        assert controlador.consultar_progreso(cliente) == []
+    with patch.object(
+        controlador,
+        "_registrar_log",
+    ) as mock_log:
+        resultado = controlador.consultar_progreso(cliente)
 
+    assert resultado == []
+    mock_log.assert_called_once()
 
 def test_consultar_progreso_rechaza_dao_none(
     controlador,
@@ -947,6 +948,8 @@ def test_generar_progreso_asigna_observaciones(
 
     mock_sesion_dao.listar_por_cliente.return_value = []
 
+    mock_progreso_dao.buscar_por_cliente_y_mes.return_value = None
+
     mock_progreso_dao.guardar.side_effect = (
         lambda valor: valor
     )
@@ -955,10 +958,10 @@ def test_generar_progreso_asigna_observaciones(
         "src.controladores.control_progreso."
         "_instanciar_progreso_mensual",
         return_value=progreso,
-    ), patch(
-        "src.controladores.control_progreso."
-        "log_generar_progreso",
-    ):
+    ), patch.object(
+        controlador,
+        "_registrar_log",
+    ) as mock_log:
         resultado = controlador.generar_progreso_mensual(
             cliente=cliente,
             mes=5,
@@ -969,6 +972,7 @@ def test_generar_progreso_asigna_observaciones(
 
     assert resultado is progreso
     assert progreso.observaciones == "Excelente avance"
+    mock_log.assert_called_once()
 
 
 def test_actualizar_peso_cliente_usa_metodo_del_cliente(

@@ -1,26 +1,15 @@
+RESUMEN DE PRUEBAS DE INTEGRACIÓN
 ======================================================================
-RESUMEN DE PRUEBAS DE INTEGRACIÓN - CARDIO-WELLNESS
-======================================================================
-Fecha: 2026-09-24 00:32:11
-
-Total: 15
-Exitosas: 15 (100.0%)
+Fecha: 2026-09-27 01:13:43
+Total: 8
+Exitosas: 8
 Fallidas: 0
 
-DETALLE:
-----------------------------------------------------------------------
-✅ Registro de usuario: Usuario registrado con ID: 3884
-✅ Registro de cliente: Cliente registrado exitosamente
-✅ Verificación de hash: Contraseña hasheada correctamente
-✅ Login correcto: Usuario autenticado: Test Integracion
-✅ Login incorrecto (contraseña): Correctamente rechazado por contraseña inválida
-✅ Login incorrecto (correo): Correctamente rechazado por correo inexistente
-✅ Creación de rutina: Rutina creada con ID: 895
-✅ Finalización de rutina anterior: Rutinas anteriores finalizadas
-✅ Asignación de rutina: Rutina asignada con ID: 384
-✅ Verificación de rutina activa: Rutina activa: Rutina Test Integración
-✅ Registro de sesión: Sesión registrada con ID: 16134
-✅ Consulta de sesión: Sesión: 45 min, 450.50 cal
+✅ Registro de cliente: Cliente registrado con ID: 5364
+✅ Verificación de hash: Hash almacenado correctamente
+✅ Login correcto: Usuario autenticado correctamente
+✅ Login incorrecto: Contraseña incorrecta rechazada
+✅ Asignación de rutina: Rutina asignada con ID: 483
+✅ Registro de sesión: Sesión registrada con ID: 17329
 ✅ Cálculo de progreso: Sesiones completadas este mes: 1
-✅ Existencia de LOG_CARDIO.txt: Archivo encontrado
-✅ Contenido de LOG_CARDIO.txt: 5 entradas recientes
+✅ Verificación de LOG_CARDIO.txt: Archivo encontrado: LOG_CARDIO.txt; entradas: 180

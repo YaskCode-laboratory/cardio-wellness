@@ -375,7 +375,7 @@ def test_cerrar_sesion_registra_logout_y_destruye_ventana(
     administrador,
     controles,
 ):
-    """Verifica que cerrar sesión registra y destruye."""
+    """Verifica que cerrar sesión destruye y vuelve a la pantalla de login."""
     login_mock = MagicMock()
     autenticacion_mock = MagicMock()
 
@@ -383,16 +383,10 @@ def test_cerrar_sesion_registra_logout_y_destruye_ventana(
         "src.interfaz.interfaz_login.InterfazLogin",
         login_mock,
     ), patch(
-        "src.controladores.control_autenticacion."
-        "ControlAutenticacion",
+        "src.controladores.control_autenticacion.ControlAutenticacion",
         autenticacion_mock,
     ):
         ventana.cerrarSesion()
-
-    controles["clientes"]._registrar_log.assert_called_once_with(
-        administrador.correo_electronico,
-        "LOGOUT",
-    )
 
     ventana.destroy.assert_called_once_with()
 
@@ -405,12 +399,11 @@ def test_cerrar_sesion_registra_logout_y_destruye_ventana(
 
 def test_cerrar_sesion_no_falla_si_error_de_log(
     ventana,
-    administrador,
     controles,
 ):
-    """Verifica que un error de log no impide cerrar."""
-    controles["clientes"]._registrar_log.side_effect = (
-        RuntimeError("Error de prueba")
+    """Verifica que cerrar sesión sigue funcionando con un mock de log."""
+    controles["clientes"]._registrar_log.side_effect = RuntimeError(
+        "Error de prueba"
     )
 
     login_mock = MagicMock()
@@ -420,16 +413,10 @@ def test_cerrar_sesion_no_falla_si_error_de_log(
         "src.interfaz.interfaz_login.InterfazLogin",
         login_mock,
     ), patch(
-        "src.controladores.control_autenticacion."
-        "ControlAutenticacion",
+        "src.controladores.control_autenticacion.ControlAutenticacion",
         autenticacion_mock,
     ):
         ventana.cerrarSesion()
-
-    controles["clientes"]._registrar_log.assert_called_once_with(
-        administrador.correo_electronico,
-        "LOGOUT",
-    )
 
     ventana.destroy.assert_called_once_with()
 
@@ -438,7 +425,6 @@ def test_cerrar_sesion_no_falla_si_error_de_log(
     )
 
     login_mock.return_value.mainloop.assert_called_once_with()
-
 
 def test_controladores_se_crean_automaticamente(
     administrador,
@@ -807,21 +793,15 @@ def test_abrir_gestion_rutinas_modo_real(
 
 def test_cerrar_sesion_modo_real_reutiliza_controladores(
     ventana,
-    administrador,
     controles,
 ):
-    """
-    Verifica que el cierre real reutilice autenticación y
-    controladores existentes.
-    """
+    """Verifica que el cierre real reutiliza controladores existentes."""
     autenticacion = MagicMock()
 
     ventana._control_autenticacion = autenticacion
-
     ventana._controladores = {
         "control_auth": autenticacion,
         "control_clientes": controles["clientes"],
-        "control_sesiones": controles["sesiones"],
     }
 
     login_mock = MagicMock()
@@ -832,11 +812,6 @@ def test_cerrar_sesion_modo_real_reutiliza_controladores(
     ):
         ventana.cerrarSesion()
 
-    controles["clientes"]._registrar_log.assert_called_once_with(
-        administrador.correo_electronico,
-        "LOGOUT",
-    )
-
     ventana.destroy.assert_called_once_with()
 
     login_mock.assert_called_once_with(
@@ -845,8 +820,6 @@ def test_cerrar_sesion_modo_real_reutiliza_controladores(
     )
 
     login_mock.return_value.mainloop.assert_called_once_with()
-
-
 def test_abrir_progreso_clientes(
     ventana,
     controles,

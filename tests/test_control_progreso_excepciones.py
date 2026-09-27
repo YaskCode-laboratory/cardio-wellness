@@ -119,31 +119,42 @@ def test_calcular_impacto_calorico_rutina_diccionario(control):
 
 
 def test_generar_progreso_mensual_exitoso(control):
-    """Prueba generar progreso mensual exitoso (CU09, CU10)."""
+    """Prueba generar o actualizar progreso mensual exitoso."""
     control.sesion_dao.listar_por_cliente.return_value = []
-    
-    progreso_mock = Mock()
-    progreso_mock.id_progreso = 1
-    control.progreso_dao.guardar.return_value = progreso_mock
-    
-    # Mockear la funcion helper para evitar el problema con date
-    with patch('src.controladores.control_progreso._instanciar_progreso_mensual') as mock_inst:
-        mock_inst.return_value = Mock()  # Retornar mock en lugar de objeto real
-        
+
+    progreso_existente = Mock()
+    progreso_existente.id_progreso = 1
+
+    progreso_actualizado = Mock()
+    progreso_actualizado.id_progreso = 1
+
+    control.progreso_dao.actualizar.return_value = progreso_actualizado
+
+    with patch(
+        "src.controladores.control_progreso."
+        "_instanciar_progreso_mensual",
+    ) as mock_inst:
+        progreso_nuevo = Mock()
+        mock_inst.return_value = progreso_nuevo
+
         cliente = Mock()
         cliente.id_usuario = 4
         cliente.peso = 70.0
-        
+
         hoy = date.today()
+
         resultado = control.generar_progreso_mensual(
-            cliente, 
-            mes=hoy.month, 
-            anio=hoy.year, 
-            peso_actual=70.0
+            cliente,
+            mes=hoy.month,
+            anio=hoy.year,
+            peso_actual=70.0,
         )
-        
-        assert resultado == progreso_mock
-        control.progreso_dao.guardar.assert_called_once()
+
+    assert resultado is progreso_actualizado
+
+    control.progreso_dao.actualizar.assert_called_once()
+
+    control.progreso_dao.guardar.assert_not_called()
 
 
 def test_generar_progreso_mensual_sin_dao(control):
@@ -158,28 +169,39 @@ def test_generar_progreso_mensual_sin_dao(control):
 
 
 def test_generar_progreso_mensual_sin_peso_cliente(control):
-    """Prueba generar progreso sin peso en cliente."""
+    """Prueba progreso mensual aunque el cliente no tenga atributo peso."""
     control.sesion_dao.listar_por_cliente.return_value = []
-    
-    progreso_mock = Mock()
-    control.progreso_dao.guardar.return_value = progreso_mock
-    
-    cliente = Mock()
-    cliente.id_usuario = 6
-    
-    with patch('src.controladores.control_progreso._instanciar_progreso_mensual') as mock_inst:
-        mock_inst.return_value = Mock()
-        
+
+    progreso_actualizado = Mock()
+    progreso_actualizado.id_progreso = 2
+
+    control.progreso_dao.actualizar.return_value = progreso_actualizado
+
+    with patch(
+        "src.controladores.control_progreso."
+        "_instanciar_progreso_mensual",
+    ) as mock_inst:
+        progreso_nuevo = Mock()
+        mock_inst.return_value = progreso_nuevo
+
+        cliente = Mock()
+        cliente.id_usuario = 6
+
         hoy = date.today()
+
         resultado = control.generar_progreso_mensual(
-            cliente, 
-            mes=hoy.month, 
-            anio=hoy.year, 
-            peso_actual=68.5
+            cliente,
+            mes=hoy.month,
+            anio=hoy.year,
+            peso_actual=68.5,
         )
-        
-        assert resultado == progreso_mock
-        
+
+    assert resultado is progreso_actualizado
+
+    control.progreso_dao.actualizar.assert_called_once()
+
+    control.progreso_dao.guardar.assert_not_called()
+    
 def test_consultar_progreso_exitoso(control):
     """Prueba consultar historial de progreso (CU03, CU10)."""
     progreso1 = Mock()

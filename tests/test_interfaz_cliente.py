@@ -261,6 +261,9 @@ class TestInterfazCliente:
             "src.interfaz.interfaz_cliente.ttk.Label",
             return_value=label_rutina,
         ), patch(
+            "src.interfaz.interfaz_cliente.ttk.Button",
+            side_effect=BotonFalso,
+        ), patch(
             "src.interfaz.interfaz_cliente.ttk.Treeview",
             return_value=tree_ejercicios,
         ):
@@ -288,19 +291,13 @@ class TestInterfazCliente:
 
         asignacion = SimpleNamespace(
             id_rutina=25,
+            id_asignacion=101,
         )
 
-        ejercicio = SimpleNamespace(
-            nombre="Caminata",
-            tipo="Cardio",
-            duracion_minutos=30,
-            intensidad=SimpleNamespace(value="Media"),
-        )
 
         rutina = SimpleNamespace(
             nombre="Rutina inicial",
             nivel=SimpleNamespace(value="Básico"),
-            ejercicios=[ejercicio],
         )
 
         control_rutinas.asignacion_dao.buscar_activa.return_value = (
@@ -308,6 +305,14 @@ class TestInterfazCliente:
         )
 
         control_rutinas.buscar_por_id.return_value = rutina
+        control_rutinas.obtener_progreso_asignacion.return_value = [
+            {
+                "nombre_ejercicio": "Caminata",
+                "tipo_ejercicio": "Cardio",
+                "duracion_minutos": 30,
+                "intensidad_ejercicio": "Media",
+            }
+        ]
 
         label_rutina = MagicMock()
         tree_ejercicios = MagicMock()
@@ -319,6 +324,9 @@ class TestInterfazCliente:
             "src.interfaz.interfaz_cliente.ttk.Label",
             return_value=label_rutina,
         ), patch(
+            "src.interfaz.interfaz_cliente.ttk.Button",
+            side_effect=BotonFalso,
+        ), patch(
             "src.interfaz.interfaz_cliente.ttk.Treeview",
             return_value=tree_ejercicios,
         ):
@@ -329,7 +337,11 @@ class TestInterfazCliente:
         )
 
         control_rutinas.buscar_por_id.assert_called_once_with(
-            asignacion.id_rutina
+            25
+        )
+
+        control_rutinas.obtener_progreso_asignacion.assert_called_once_with(
+            101
         )
 
         label_rutina.config.assert_called_once_with(
@@ -360,6 +372,7 @@ class TestInterfazCliente:
 
         asignacion = SimpleNamespace(
             id_rutina=99,
+            id_asignacion=101,
         )
 
         control_rutinas.asignacion_dao.buscar_activa.return_value = (
@@ -378,13 +391,16 @@ class TestInterfazCliente:
             "src.interfaz.interfaz_cliente.ttk.Label",
             return_value=label_rutina,
         ), patch(
+            "src.interfaz.interfaz_cliente.ttk.Button",
+            side_effect=BotonFalso,
+        ), patch(
             "src.interfaz.interfaz_cliente.ttk.Treeview",
             return_value=tree_ejercicios,
         ):
             interfaz.consultarRutinaActiva()
 
         label_rutina.config.assert_called_once_with(
-            text="No se encontro la rutina activa."
+            text="No se encontró la rutina activa."
         )
 
         tree_ejercicios.insert.assert_not_called()
@@ -412,6 +428,9 @@ class TestInterfazCliente:
         ), patch(
             "src.interfaz.interfaz_cliente.ttk.Label",
             return_value=label_rutina,
+        ), patch(
+            "src.interfaz.interfaz_cliente.ttk.Button",
+            side_effect=BotonFalso,
         ), patch(
             "src.interfaz.interfaz_cliente.ttk.Treeview",
             return_value=tree_ejercicios,
@@ -482,7 +501,7 @@ class TestInterfazCliente:
             )
         ]
 
-    def test_cerrar_sesion_registra_logout_y_destruye_ventana(
+    def test_cerrar_sesion_modo_prueba_destruye_ventana_y_abre_login(
         self,
         interfaz,
         control_sesiones,
@@ -507,10 +526,7 @@ class TestInterfazCliente:
 
             interfaz.cerrarSesion()
 
-        control_sesiones._registrar_log.assert_called_once_with(
-            interfaz.cliente_actual.correo_electronico,
-            "LOGOUT",
-        )
+        control_sesiones._registrar_log.assert_not_called()
 
         mock_destroy.assert_called_once_with()
 
@@ -530,9 +546,6 @@ class TestInterfazCliente:
         """
         Verifica que el cierre continúe aunque falle el log.
         """
-        control_sesiones._registrar_log.side_effect = RuntimeError(
-            "Error al registrar log"
-        )
 
         controlador_autenticacion = MagicMock()
         interfaz_login = MagicMock()
@@ -550,10 +563,7 @@ class TestInterfazCliente:
 
             interfaz.cerrarSesion()
 
-        control_sesiones._registrar_log.assert_called_once_with(
-            interfaz.cliente_actual.correo_electronico,
-            "LOGOUT",
-        )
+        control_sesiones._registrar_log.assert_not_called()
 
         mock_destroy.assert_called_once_with()
 
@@ -1167,7 +1177,10 @@ class TestInterfazCliente:
         interfaz._tree_ejercicios = MagicMock()
 
         control_rutinas.asignacion_dao.buscar_activa.return_value = (
-            SimpleNamespace(id_rutina=5)
+            SimpleNamespace(
+                id_rutina=5,
+                id_asignacion=101,
+            )
         )
 
         control_rutinas.buscar_por_id.return_value = (
@@ -1178,13 +1191,15 @@ class TestInterfazCliente:
             )
         )
 
+        control_rutinas.obtener_progreso_asignacion.return_value = []
+
         interfaz._cargar_datos_rutina()
 
         interfaz._tree_ejercicios.insert.assert_called_once_with(
             "",
             "end",
             values=(
-                "Sin ejercicios",
+                "Sin ejercicios activos",
                 "",
                 "",
                 "",
@@ -1205,22 +1220,25 @@ class TestInterfazCliente:
 
         control_rutinas.asignacion_dao.buscar_activa.return_value = {
             "id_rutina": "7",
+            "id_asignacion": "102",
         }
 
-        ejercicio = SimpleNamespace(
-            nombre="Bicicleta",
-            tipo="LISS",
-            duracion=45,
-            intensidad="MEDIA",
-        )
 
         control_rutinas.buscar_por_id.return_value = (
             SimpleNamespace(
                 nombre="Rutina cardio",
                 nivel="INTERMEDIO",
-                ejercicios=[ejercicio],
             )
         )
+
+        control_rutinas.obtener_progreso_asignacion.return_value = [
+            {
+                "nombre_ejercicio": "Bicicleta",
+                "tipo_ejercicio": "LISS",
+                "duracion_minutos": 45,
+                "intensidad_ejercicio": "MEDIA",
+            }
+        ]
 
         interfaz._cargar_datos_rutina()
 
@@ -1261,9 +1279,10 @@ class TestInterfazCliente:
         ) as mock_login:
             interfaz.cerrarSesion()
 
-        control_sesiones._registrar_log.assert_called_once_with(
-            interfaz.cliente_actual.correo_electronico,
-            "LOGOUT",
+        control_sesiones._registrar_log.assert_not_called()
+
+        interfaz._control_autenticacion.cerrar_sesion.assert_called_once_with(
+            interfaz.cliente_actual
         )
 
         interfaz.destroy.assert_called_once_with()
