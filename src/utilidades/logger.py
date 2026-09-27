@@ -21,6 +21,9 @@ RUTA_LOGS.mkdir(
 
 ARCHIVO_LOG = RUTA_LOGS / "LOG_CARDIO.txt"
 
+logs_dir = RUTA_LOGS
+ruta_log = ARCHIVO_LOG
+archivo_log = ARCHIVO_LOG
 
 logger = logging.getLogger("cardio_wellness")
 logger.setLevel(logging.INFO)
@@ -59,6 +62,17 @@ def _configurar_logger() -> None:
 
 
 _configurar_logger()
+handler = next(
+    (
+        handler_actual
+        for handler_actual in logger.handlers
+        if isinstance(
+            handler_actual,
+            logging.FileHandler,
+        )
+    ),
+    None,
+)
 
 
 def registrar_actividad(
@@ -92,10 +106,10 @@ def registrar_actividad(
         else str(detalle).strip()
     )
 
-    mensaje = f"{usuario_str}, {accion_str}"
+    mensaje = f"{usuario_str}, {accion_str},"
 
     if detalle_str:
-        mensaje += f", {detalle_str}"
+        mensaje += f" {detalle_str}"
 
     logger.info(mensaje)
 
@@ -218,7 +232,7 @@ def log_creacion_rutina(
     Registra la creación de una rutina.
     """
     registrar_actividad(
-        usuario,
+        str(usuario),
         "CREACION_RUTINA",
         f"ID: {id_rutina}",
     )
@@ -232,7 +246,7 @@ def log_creacion_ejercicio(
     Registra la creación de un ejercicio.
     """
     registrar_actividad(
-        usuario,
+        str(usuario),
         "CREACION_EJERCICIO",
         f"ID: {id_ejercicio}",
     )
@@ -246,7 +260,7 @@ def log_sugerencia_rutina(
     Registra una sugerencia de rutina.
     """
     registrar_actividad(
-        usuario,
+        str(usuario),
         "SUGERENCIA_RUTINA",
         tipo,
     )

@@ -1,4 +1,6 @@
+from pathlib import Path
 from typing import Optional
+
 
 from src.utilidades.logger import registrar_actividad
 
@@ -22,7 +24,7 @@ class ControlBase:
         controladores actuales, pero la escritura real se
         realiza mediante registrar_actividad().
         """
-        self.ruta_log = ruta_log
+        self.ruta_log = Path(ruta_log)
 
     def _registrar_log(
         self,

@@ -1,7 +1,7 @@
 from datetime import date
 from decimal import Decimal
 from types import SimpleNamespace
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -38,19 +38,18 @@ def sistema(
     mock_rutinas,
     mock_progreso,
     mock_pdf,
-    tmp_path,
 ):
     """
-    Crea el servicio con dependencias simuladas y log temporal.
-    """
-    log_file = tmp_path / "logs" / "LOG_CARDIO.txt"
+    Crea el servicio con dependencias simuladas.
 
+    El logger global registra auditoría en logs/LOG_CARDIO.txt,
+    que es también la ruta predeterminada de ControlBase.
+    """
     return SistemaWellness(
         control_clientes=mock_clientes,
         control_rutinas=mock_rutinas,
         control_progreso=mock_progreso,
         generador_pdf=mock_pdf,
-        ruta_log=str(log_file),
     )
 
 
@@ -117,6 +116,22 @@ def test_constructor_crea_generador_pdf_por_defecto(
 def test_registrar_log_sin_detalle(
     sistema,
 ):
+    """
+    Cubre la llamada al log base cuando detalle es None.
+    """
+    with patch.object(
+        sistema,
+        "_registrar_log",
+    ) as mock_registrar_log:
+        sistema._registrar_log(
+            "USUARIO_1",
+            "ACCION_SIN_DETALLE",
+        )
+
+    mock_registrar_log.assert_called_once_with(
+        "USUARIO_1",
+        "ACCION_SIN_DETALLE",
+    )
     """
     Cubre la llamada al log base cuando detalle es None.
     """

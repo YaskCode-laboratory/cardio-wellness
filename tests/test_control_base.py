@@ -1,83 +1,66 @@
 from unittest.mock import patch
 
+
 from src.controladores.control_base import ControlBase
 
 
-def test_control_base_registro_log(
-    tmp_path,
-):
-    log_file = tmp_path / "logs" / "LOG_CARDIO.txt"
+def test_control_base_registro_log():
+    control = ControlBase()
 
-    control = ControlBase(
-        ruta_log=str(log_file),
-    )
+    with patch(
+        "src.controladores.control_base.registrar_actividad",
+    ) as mock_registrar_actividad:
+        control._registrar_log(
+            "usuario_demo",
+            "ACCION_PRUEBA",
+        )
 
-    control._registrar_log(
+    mock_registrar_actividad.assert_called_once_with(
         "usuario_demo",
         "ACCION_PRUEBA",
+        "",
     )
 
-    contenido = log_file.read_text(
-        encoding="utf-8",
-    )
 
-    assert "usuario_demo, ACCION_PRUEBA" in contenido
+def test_control_base_registro_log_con_detalle():
+    control = ControlBase()
 
+    with patch(
+        "src.controladores.control_base.registrar_actividad",
+    ) as mock_registrar_actividad:
+        control._registrar_log(
+            "usuario_demo",
+            "ACCION_PRUEBA",
+            detalle="META: Bajar de peso",
+        )
 
-def test_control_base_registro_log_con_detalle(
-    tmp_path,
-):
-    log_file = tmp_path / "logs" / "LOG_CARDIO.txt"
-
-    control = ControlBase(
-        ruta_log=str(log_file),
-    )
-
-    control._registrar_log(
+    mock_registrar_actividad.assert_called_once_with(
         "usuario_demo",
         "ACCION_PRUEBA",
-        detalle="META: Bajar de peso",
+        "META: Bajar de peso",
     )
 
-    contenido = log_file.read_text(
-        encoding="utf-8",
-    )
 
-    assert (
-        "usuario_demo, ACCION_PRUEBA, "
-        "META: Bajar de peso"
-    ) in contenido
+def test_control_base_usa_sistema_si_usuario_es_none():
+    control = ControlBase()
 
+    with patch(
+        "src.controladores.control_base.registrar_actividad",
+    ) as mock_registrar_actividad:
+        control._registrar_log(
+            None,
+            "ACCION_SISTEMA",
+        )
 
-def test_control_base_usa_sistema_si_usuario_es_none(
-    tmp_path,
-):
-    log_file = tmp_path / "logs" / "LOG_CARDIO.txt"
-
-    control = ControlBase(
-        ruta_log=str(log_file),
-    )
-
-    control._registrar_log(
-        None,
+    mock_registrar_actividad.assert_called_once_with(
+        "SISTEMA",
         "ACCION_SISTEMA",
+        "",
     )
 
-    contenido = log_file.read_text(
-        encoding="utf-8",
-    )
 
-    assert "SISTEMA, ACCION_SISTEMA" in contenido
-
-
-def test_control_base_registra_actividad_externa(
-    tmp_path,
-):
-    log_file = tmp_path / "logs" / "LOG_CARDIO.txt"
-
-    control = ControlBase(
-        ruta_log=str(log_file),
-    )
+def test_control_base_registra_actividad_externa():
+    control = ControlBase()
 
     with patch(
         "src.controladores.control_base.registrar_actividad",
@@ -95,14 +78,8 @@ def test_control_base_registra_actividad_externa(
     )
 
 
-def test_control_base_envia_detalle_vacio_a_logger(
-    tmp_path,
-):
-    log_file = tmp_path / "logs" / "LOG_CARDIO.txt"
-
-    control = ControlBase(
-        ruta_log=str(log_file),
-    )
+def test_control_base_envia_detalle_vacio_a_logger():
+    control = ControlBase()
 
     with patch(
         "src.controladores.control_base.registrar_actividad",
@@ -119,61 +96,45 @@ def test_control_base_envia_detalle_vacio_a_logger(
     )
 
 
-def test_control_base_alias_registrar_auditoria(
-    tmp_path,
-):
-    log_file = tmp_path / "logs" / "LOG_CARDIO.txt"
+def test_control_base_alias_registrar_auditoria():
+    control = ControlBase()
 
-    control = ControlBase(
-        ruta_log=str(log_file),
-    )
+    with patch.object(
+        control,
+        "_registrar_log",
+    ) as mock_registrar_log:
+        control._registrar_auditoria(
+            "admin",
+            "ACCION_AUDITORIA",
+            detalle="Prueba de alias",
+        )
 
-    control._registrar_auditoria(
+    mock_registrar_log.assert_called_once_with(
         "admin",
         "ACCION_AUDITORIA",
-        detalle="Prueba de alias",
+        "Prueba de alias",
     )
 
-    contenido = log_file.read_text(
-        encoding="utf-8",
-    )
 
-    assert (
-        "admin, ACCION_AUDITORIA, "
-        "Prueba de alias"
-    ) in contenido
-
-
-def test_control_base_no_interrumpe_si_falla_logger_externo(
-    tmp_path,
-):
-    log_file = tmp_path / "logs" / "LOG_CARDIO.txt"
-
-    control = ControlBase(
-        ruta_log=str(log_file),
-    )
+def test_control_base_no_interrumpe_si_falla_logger_externo():
+    control = ControlBase()
 
     with patch(
         "src.controladores.control_base.registrar_actividad",
-        side_effect=RuntimeError("Error de logger externo"),
-    ):
-        with patch(
-            "logging.Logger.warning",
-        ) as mock_warning:
-            control._registrar_log(
-                "usuario_demo",
-                "ACCION_CON_ERROR",
-            )
+        side_effect=RuntimeError(
+            "Error de logger externo",
+        ),
+    ), patch(
+        "logging.Logger.warning",
+    ) as mock_warning:
+        control._registrar_log(
+            "usuario_demo",
+            "ACCION_CON_ERROR",
+        )
 
     mock_warning.assert_called_once()
 
     mensaje = mock_warning.call_args.args[0]
 
-    assert "No se pudo registrar la auditoria" in mensaje
+    assert "No se pudo registrar la auditoría" in mensaje
     assert "Error de logger externo" in mensaje
-
-    contenido = log_file.read_text(
-        encoding="utf-8",
-    )
-
-    assert "usuario_demo, ACCION_CON_ERROR" in contenido

@@ -645,7 +645,8 @@ class ClienteDAO:
         nueva_contrasenia: str,
     ) -> bool:
         """
-        Cambia la contraseña verificando la actual.
+        Cambia la contraseña de un cliente verificando primero
+        la contraseña actual.
         """
         self._validar_id(id_usuario)
 
@@ -677,17 +678,14 @@ class ClienteDAO:
             with self._bd._conexion.cursor() as cursor:
                 cursor.execute(
                     """
-                    UPDATE usuarios
-                    SET contrasenia_hash = %s
+                    SELECT contrasenia_hash
+                    FROM usuarios
                     WHERE id_usuario = %s
                       AND LOWER(
                         CAST(tipo_usuario AS TEXT)
                       ) = 'cliente'
                     """,
-                    (
-                        nuevo_hash,
-                        id_usuario,
-                    ),
+                    (id_usuario,),
                 )
 
                 fila = cursor.fetchone()
@@ -717,16 +715,13 @@ class ClienteDAO:
                 cursor.execute(
                     """
                     UPDATE usuarios
-                    SET
-                        contrasenia_hash = %s,
-                        U&"contrase\\00F1a_hash" = %s
+                    SET contrasenia_hash = %s
                     WHERE id_usuario = %s
                       AND LOWER(
                         CAST(tipo_usuario AS TEXT)
                       ) = 'cliente'
                     """,
                     (
-                        nuevo_hash,
                         nuevo_hash,
                         id_usuario,
                     ),

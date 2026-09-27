@@ -1,4 +1,4 @@
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 from uuid import uuid4
 
 import pytest
@@ -40,6 +40,7 @@ def test_iniciar_sesion_exitoso_registra_auditoria(
     Prueba inicio de sesión exitoso y auditoría.
     """
     usuario_esperado = Mock()
+
     usuario_esperado.correo_electronico = (
         "usuario@example.com"
     )
@@ -48,10 +49,14 @@ def test_iniciar_sesion_exitoso_registra_auditoria(
         usuario_esperado
     )
 
-    resultado = controlador.iniciar_sesion(
-        "usuario@example.com",
-        "Secreto123",
-    )
+    with patch.object(
+        controlador,
+        "_registrar_log",
+    ) as mock_registrar_log:
+        resultado = controlador.iniciar_sesion(
+            "usuario@example.com",
+            "Secreto123",
+        )
 
     assert resultado is usuario_esperado
     assert controlador.obtener_usuario_actual() is usuario_esperado
@@ -62,13 +67,11 @@ def test_iniciar_sesion_exitoso_registra_auditoria(
         "Secreto123",
     )
 
-    contenido_log = controlador.ruta_log.read_text(
-        encoding="utf-8"
+    mock_registrar_log.assert_called_once_with(
+        "usuario@example.com",
+        "LOGIN_EXITOSO",
+        "Inicio de sesión exitoso",
     )
-
-    assert "usuario@example.com" in contenido_log
-    assert "LOGIN_EXITOSO" in contenido_log
-
 
 def test_iniciar_sesion_normaliza_correo(
     controlador,
@@ -109,10 +112,14 @@ def test_iniciar_sesion_fallido_registra_auditoria(
     """
     mock_usuario_dao.iniciar_sesion.return_value = None
 
-    resultado = controlador.iniciar_sesion(
-        "desconocido@example.com",
-        "ClaveErronea",
-    )
+    with patch.object(
+        controlador,
+        "_registrar_log",
+    ) as mock_registrar_log:
+        resultado = controlador.iniciar_sesion(
+            "desconocido@example.com",
+            "ClaveErronea",
+        )
 
     assert resultado is None
     assert controlador.obtener_usuario_actual() is None
@@ -123,12 +130,11 @@ def test_iniciar_sesion_fallido_registra_auditoria(
         "ClaveErronea",
     )
 
-    contenido_log = controlador.ruta_log.read_text(
-        encoding="utf-8"
+    mock_registrar_log.assert_called_once_with(
+        "desconocido@example.com",
+        "LOGIN_FALLIDO",
+        "Intento de inicio de sesión fallido",
     )
-
-    assert "desconocido@example.com" in contenido_log
-    assert "LOGIN_FALLIDO" in contenido_log
 
 
 def test_validar_credenciales_camel_case(
@@ -263,9 +269,10 @@ def test_cerrar_sesion_con_usuario_actual_registra_logout(
 ):
     """
     Prueba que cerrar sesión use el usuario almacenado, lo elimine
-    de la sesión y escriba un evento LOGOUT en auditoría.
+    de la sesión y registre un evento LOGOUT.
     """
     usuario = Mock()
+
     usuario.correo_electronico = "activo@example.com"
 
     mock_usuario_dao.iniciar_sesion.return_value = usuario
@@ -278,19 +285,21 @@ def test_cerrar_sesion_con_usuario_actual_registra_logout(
     assert controlador.obtener_usuario_actual() is usuario
     assert controlador.esta_autenticado() is True
 
-    resultado = controlador.cerrar_sesion()
+    with patch.object(
+        controlador,
+        "_registrar_log",
+    ) as mock_registrar_log:
+        resultado = controlador.cerrar_sesion()
 
     assert resultado is True
     assert controlador.obtener_usuario_actual() is None
     assert controlador.esta_autenticado() is False
 
-    contenido_log = controlador.ruta_log.read_text(
-        encoding="utf-8"
+    mock_registrar_log.assert_called_once_with(
+        "activo@example.com",
+        "LOGOUT",
+        "Sesión cerrada",
     )
-
-    assert "activo@example.com" in contenido_log
-    assert "LOGOUT" in contenido_log
-
 
 def test_cerrar_sesion_con_usuario_recibido_registra_logout(
     controlador,
@@ -299,20 +308,23 @@ def test_cerrar_sesion_con_usuario_recibido_registra_logout(
     Prueba cerrar_sesion cuando recibe explícitamente el usuario.
     """
     usuario = Mock()
+
     usuario.correo_electronico = "manual@example.com"
 
-    resultado = controlador.cerrarSesion(usuario)
+    with patch.object(
+        controlador,
+        "_registrar_log",
+    ) as mock_registrar_log:
+        resultado = controlador.cerrarSesion(usuario)
 
     assert resultado is True
     assert controlador.obtener_usuario_actual() is None
 
-    contenido_log = controlador.ruta_log.read_text(
-        encoding="utf-8"
+    mock_registrar_log.assert_called_once_with(
+        "manual@example.com",
+        "LOGOUT",
+        "Sesión cerrada",
     )
-
-    assert "manual@example.com" in contenido_log
-    assert "LOGOUT" in contenido_log
-
 
 @pytest.mark.parametrize(
     "correo",

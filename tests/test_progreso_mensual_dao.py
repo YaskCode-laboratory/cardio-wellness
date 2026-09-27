@@ -30,7 +30,7 @@ def id_cliente_prueba():
                 nombre,
                 apellido,
                 correo_electronico,
-                "contraseña_hash",
+                contrasenia_hash,
                 edad,
                 tipo_usuario
             )

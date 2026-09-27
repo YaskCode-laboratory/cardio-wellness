@@ -30,7 +30,7 @@ def datos_prueba():
         cursor.execute(
             """
             INSERT INTO usuarios (
-                nombre, apellido, correo_electronico, "contraseña_hash", edad, tipo_usuario
+                nombre, apellido, correo_electronico, contrasenia_hash, edad, tipo_usuario
             )
             VALUES (%s, %s, %s, %s, %s, 'cliente')
             RETURNING id_usuario

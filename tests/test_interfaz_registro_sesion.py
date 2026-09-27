@@ -1,8 +1,10 @@
 from datetime import date
-from unittest.mock import MagicMock, patch
 from types import SimpleNamespace
+from unittest.mock import MagicMock, patch
+
 
 import pytest
+
 
 from src.interfaz.interfaz_registro_sesion import (
     InterfazRegistroSesion,
@@ -10,16 +12,13 @@ from src.interfaz.interfaz_registro_sesion import (
 
 
 class WidgetFalso:
-    """
-    Widget falso para simular widgets ttk.
-    """
-
     def __init__(self, valor="", *args, **kwargs):
         self.valor = valor
         self.args = args
         self.kwargs = kwargs
+        self.configuracion = {}
         self.eliminaciones = []
-        self.configuraciones = []
+        self.valores = []
 
     def pack(self, *args, **kwargs):
         pass
@@ -27,15 +26,33 @@ class WidgetFalso:
     def grid(self, *args, **kwargs):
         pass
 
+    def bind(self, *args, **kwargs):
+        pass
+
     def get(self):
         return self.valor
+
+    def set(self, valor):
+        self.valor = valor
 
     def delete(self, *args, **kwargs):
         self.eliminaciones.append((args, kwargs))
         self.valor = ""
 
-    def set(self, valor):
-        self.valor = valor
+    def config(self, **kwargs):
+        self.configuracion.update(kwargs)
+
+    def __setitem__(self, clave, valor):
+        if clave == "values":
+            self.valores = list(valor)
+        else:
+            self.configuracion[clave] = valor
+
+    def __getitem__(self, clave):
+        if clave == "values":
+            return self.valores
+
+        return self.configuracion.get(clave)
 
 
 class FrameFalso(WidgetFalso):
@@ -63,67 +80,103 @@ class ButtonFalso(WidgetFalso):
 
 
 class TestInterfazRegistroSesion:
-
     @pytest.fixture
     def control_sesiones(self):
-        """
-        Crea un controlador de sesiones simulado.
-        """
-        return MagicMock()
+        control = MagicMock()
+
+        control.asignacion_dao = MagicMock()
+        control.asignacion_ejercicio_dao = MagicMock()
+
+        return control
 
     @pytest.fixture
-    def interfaz(self, control_sesiones):
-        """
-        Crea la interfaz sin ejecutar el constructor real.
-        """
-        interfaz = object.__new__(InterfazRegistroSesion)
+    def interfaz(
+        self,
+        control_sesiones,
+    ):
+        interfaz = object.__new__(
+            InterfazRegistroSesion
+        )
 
         interfaz._controlador = control_sesiones
         interfaz._id_cliente = 10
+        interfaz._id_rutina = 25
+        interfaz._id_asignacion = 100
+        interfaz._ejercicios_asignados = []
+        interfaz._ejercicio_asignado_actual = None
+
+        interfaz._cb_ejercicio = ComboboxFalso()
+        interfaz._ent_veces_realizadas = EntryFalso()
+        interfaz._ent_duracion = EntryFalso()
+        interfaz._cb_intensidad = ComboboxFalso()
+        interfaz._ent_observaciones = EntryFalso()
+
+        interfaz._lbl_rutina = LabelFalso()
+        interfaz._lbl_meta_total = LabelFalso()
+        interfaz._lbl_veces_realizadas = LabelFalso()
+        interfaz._lbl_veces_restantes = LabelFalso()
+        interfaz._lbl_mensaje = LabelFalso()
 
         return interfaz
 
-    @pytest.fixture
-    def widgets_formulario(self):
-        """
-        Crea los widgets falsos del formulario.
-        """
+    @staticmethod
+    def crear_ejercicio_asignado(
+        id_asignacion_ejercicio=501,
+        nombre="Caminata",
+        planificadas=5,
+        realizadas=1,
+    ):
         return {
-            "duracion": EntryFalso(),
-            "intensidad": ComboboxFalso(),
-            "calorias": EntryFalso(),
-            "observaciones": EntryFalso(),
+            "id_asignacion_ejercicio": (
+                id_asignacion_ejercicio
+            ),
+            "nombre_ejercicio": nombre,
+            "veces_planificadas": planificadas,
+            "veces_realizadas": realizadas,
         }
 
-    def asignar_widgets_formulario(
+    def configurar_formulario_valido(
         self,
         interfaz,
-        widgets,
+        duracion="45",
+        intensidad="MEDIA",
+        realizadas="2",
+        observaciones="Entrenamiento normal",
     ):
-        """
-        Asigna los widgets falsos a la interfaz.
-        """
-        interfaz._ent_duracion = widgets["duracion"]
-        interfaz._cb_intensidad = widgets["intensidad"]
-        interfaz._ent_calorias = widgets["calorias"]
-        interfaz._ent_observaciones = widgets["observaciones"]
+        ejercicio = self.crear_ejercicio_asignado()
+
+        interfaz._ejercicio_asignado_actual = ejercicio
+        interfaz._ent_duracion.set(duracion)
+        interfaz._cb_intensidad.set(intensidad)
+        interfaz._ent_veces_realizadas.set(realizadas)
+        interfaz._ent_observaciones.set(observaciones)
+
+        return ejercicio
 
     def test_propiedad_id_cliente(
         self,
         interfaz,
     ):
-        """
-        Verifica la propiedad id_cliente.
-        """
         assert interfaz.id_cliente == 10
+
+    def test_propiedad_id_rutina(
+        self,
+        interfaz,
+    ):
+        assert interfaz.id_rutina == 25
+
+    def test_propiedad_id_rutina_devuelve_none_si_no_existe(
+        self,
+        interfaz,
+    ):
+        del interfaz._id_rutina
+
+        assert interfaz.id_rutina is None
 
     def test_mostrar_formulario_sesion_crea_widgets(
         self,
         interfaz,
     ):
-        """
-        Verifica que se creen los widgets del formulario.
-        """
         with patch(
             "src.interfaz.interfaz_registro_sesion.ttk.LabelFrame",
             side_effect=LabelFrameFalso,
@@ -145,268 +198,353 @@ class TestInterfazRegistroSesion:
         ):
             interfaz.mostrarFormularioSesion()
 
-        assert hasattr(interfaz, "_ent_duracion")
-        assert hasattr(interfaz, "_cb_intensidad")
-        assert hasattr(interfaz, "_ent_calorias")
-        assert hasattr(interfaz, "_ent_observaciones")
+        assert isinstance(
+            interfaz._cb_ejercicio,
+            ComboboxFalso,
+        )
 
-        assert isinstance(interfaz._ent_duracion, EntryFalso)
-        assert isinstance(interfaz._cb_intensidad, ComboboxFalso)
-        assert isinstance(interfaz._ent_calorias, EntryFalso)
-        assert isinstance(interfaz._ent_observaciones, EntryFalso)
+        assert isinstance(
+            interfaz._ent_veces_realizadas,
+            EntryFalso,
+        )
+
+        assert isinstance(
+            interfaz._ent_duracion,
+            EntryFalso,
+        )
+
+        assert isinstance(
+            interfaz._cb_intensidad,
+            ComboboxFalso,
+        )
+
+        assert isinstance(
+            interfaz._ent_observaciones,
+            EntryFalso,
+        )
+
+    def test_cargar_rutina_activa_sin_asignacion(
+        self,
+        interfaz,
+        control_sesiones,
+    ):
+        control_sesiones.asignacion_dao.buscar_activa.return_value = (
+            None
+        )
+
+        interfaz._cargar_rutina_activa()
+
+        assert interfaz._id_asignacion is None
+        assert interfaz._id_rutina is None
+        assert interfaz._ejercicios_asignados == []
+        assert interfaz._ejercicio_asignado_actual is None
+        assert interfaz._cb_ejercicio["values"] == []
+        assert interfaz._cb_ejercicio.get() == ""
+
+    def test_cargar_rutina_activa_con_ejercicios(
+        self,
+        interfaz,
+        control_sesiones,
+    ):
+        asignacion = SimpleNamespace(
+            id_asignacion=100,
+            id_rutina=25,
+            estado="ACTIVA",
+        )
+
+        ejercicio = self.crear_ejercicio_asignado()
+
+        control_sesiones.asignacion_dao.buscar_activa.return_value = (
+            asignacion
+        )
+
+        control_sesiones.asignacion_ejercicio_dao.obtener_progreso.return_value = [
+            ejercicio
+        ]
+
+        interfaz._cargar_rutina_activa()
+
+        assert interfaz._id_asignacion == 100
+        assert interfaz._id_rutina == 25
+
+        assert interfaz._cb_ejercicio["values"] == [
+            "501 - Caminata"
+        ]
+
+        control_sesiones.asignacion_ejercicio_dao.obtener_progreso.assert_called_once_with(
+            id_asignacion=100,
+            solo_activos=True,
+        )
+
+    def test_seleccionar_ejercicio_actualiza_datos(
+        self,
+        interfaz,
+    ):
+        ejercicio = self.crear_ejercicio_asignado(
+            planificadas=5,
+            realizadas=2,
+        )
+
+        interfaz._ejercicios_asignados = [ejercicio]
+
+        interfaz._cb_ejercicio.set(
+            "501 - Caminata"
+        )
+
+        interfaz._seleccionar_ejercicio()
+
+        assert (
+            interfaz._ejercicio_asignado_actual
+            is ejercicio
+        )
+
+        assert (
+            interfaz._lbl_meta_total.configuracion["text"]
+            == "5"
+        )
+
+        assert (
+            interfaz._lbl_veces_realizadas.configuracion["text"]
+            == "2"
+        )
+
+        assert (
+            interfaz._lbl_veces_restantes.configuracion["text"]
+            == "3"
+        )
+
+    def test_registrar_sesion_sin_rutina_activa(
+        self,
+        interfaz,
+        control_sesiones,
+    ):
+        interfaz._id_asignacion = None
+
+        with patch.object(
+            interfaz,
+            "mostrar_error",
+        ) as mock_error:
+            interfaz.registrarSesion()
+
+        control_sesiones.registrar_sesion.assert_not_called()
+
+        mock_error.assert_called_once_with(
+            "No tiene una rutina activa para registrar."
+        )
+
+    def test_registrar_sesion_sin_ejercicio_seleccionado(
+        self,
+        interfaz,
+        control_sesiones,
+    ):
+        interfaz._ejercicio_asignado_actual = None
+
+        with patch.object(
+            interfaz,
+            "mostrar_error",
+        ) as mock_error:
+            interfaz.registrarSesion()
+
+        control_sesiones.registrar_sesion.assert_not_called()
+
+        mock_error.assert_called_once_with(
+            "Seleccione un ejercicio de su rutina."
+        )
+
+    @pytest.mark.parametrize(
+        "duracion, intensidad, realizadas",
+        [
+            ("", "MEDIA", "1"),
+            ("30", "", "1"),
+            ("30", "MEDIA", ""),
+        ],
+    )
+    def test_registrar_sesion_requiere_campos(
+        self,
+        interfaz,
+        control_sesiones,
+        duracion,
+        intensidad,
+        realizadas,
+    ):
+        self.configurar_formulario_valido(
+            interfaz,
+            duracion=duracion,
+            intensidad=intensidad,
+            realizadas=realizadas,
+        )
+
+        with patch.object(
+            interfaz,
+            "mostrar_error",
+        ) as mock_error:
+            interfaz.registrarSesion()
+
+        control_sesiones.registrar_sesion.assert_not_called()
+
+        mock_error.assert_called_once_with(
+            (
+                "Complete duración, intensidad "
+                "y cantidad realizada."
+            )
+        )
+
+    @pytest.mark.parametrize(
+        "duracion, realizadas, mensaje",
+        [
+            (
+                "0",
+                "1",
+                "La duración debe ser mayor que cero.",
+            ),
+            (
+                "texto",
+                "1",
+                "invalid literal for int()",
+            ),
+            (
+                "30",
+                "0",
+                (
+                    "La cantidad realizada debe ser "
+                    "mayor que cero."
+                ),
+            ),
+            (
+                "30",
+                "texto",
+                "invalid literal for int()",
+            ),
+        ],
+    )
+    def test_registrar_sesion_valida_numeros(
+        self,
+        interfaz,
+        control_sesiones,
+        duracion,
+        realizadas,
+        mensaje,
+    ):
+        self.configurar_formulario_valido(
+            interfaz,
+            duracion=duracion,
+            realizadas=realizadas,
+        )
+
+        with patch.object(
+            interfaz,
+            "mostrar_error",
+        ) as mock_error:
+            interfaz.registrarSesion()
+
+        control_sesiones.registrar_sesion.assert_not_called()
+
+        assert mensaje in mock_error.call_args.args[0]
+
+    def test_registrar_sesion_rechaza_superar_restantes(
+        self,
+        interfaz,
+        control_sesiones,
+    ):
+        ejercicio = self.configurar_formulario_valido(
+            interfaz,
+            realizadas="5",
+        )
+
+        ejercicio["veces_planificadas"] = 5
+        ejercicio["veces_realizadas"] = 2
+
+        with patch.object(
+            interfaz,
+            "mostrar_error",
+        ) as mock_error:
+            interfaz.registrarSesion()
+
+        control_sesiones.registrar_sesion.assert_not_called()
+
+        assert (
+            "No puede registrar más de 3 vez/veces"
+            in mock_error.call_args.args[0]
+        )
 
     def test_registrar_sesion_correctamente(
         self,
         interfaz,
         control_sesiones,
-        widgets_formulario,
     ):
-        """
-        Verifica el registro correcto de una sesión.
-        """
-        self.asignar_widgets_formulario(
+        ejercicio = self.configurar_formulario_valido(
             interfaz,
-            widgets_formulario,
-        )
-
-        widgets_formulario["duracion"].valor = "45"
-        widgets_formulario["intensidad"].valor = "ALTA"
-        widgets_formulario["calorias"].valor = "500.5"
-        widgets_formulario["observaciones"].valor = (
-            "Entrenamiento completado"
+            duracion="45",
+            intensidad="ALTA",
+            realizadas="2",
+            observaciones="Entrenamiento completado",
         )
 
         fecha_prueba = date(2026, 9, 19)
 
+        sesion = SimpleNamespace(
+            completada=False,
+            calorias_quemadas=321.5,
+            veces_realizadas=2,
+        )
+
+        control_sesiones.registrar_sesion.return_value = sesion
+
         with patch(
-            "src.interfaz.interfaz_registro_sesion.date"
+            "src.interfaz.interfaz_registro_sesion.date",
         ) as mock_date, patch.object(
             interfaz,
             "mostrar_mensaje",
         ) as mock_mensaje, patch.object(
             interfaz,
             "cancelarRegistro",
-        ) as mock_cancelar:
+        ) as mock_cancelar, patch.object(
+            interfaz,
+            "_cargar_rutina_activa",
+        ) as mock_cargar:
 
             mock_date.today.return_value = fecha_prueba
 
             interfaz.registrarSesion()
 
         control_sesiones.registrar_sesion.assert_called_once_with(
-            id_cliente=10,
+            cliente=10,
+            rutina=25,
+            fecha=fecha_prueba,
+            nombre_ejercicio="Caminata",
             duracion_real=45,
             intensidad_real="ALTA",
-            calorias_quemadas=500.5,
             observaciones="Entrenamiento completado",
-            fecha=fecha_prueba,
+            veces_planificadas=4,
+            veces_realizadas=2,
+            id_asignacion_ejercicio=(
+                ejercicio["id_asignacion_ejercicio"]
+            ),
         )
 
-        mock_mensaje.assert_called_once_with(
-            "Sesion registrada exitosamente."
+        assert (
+            "Sesión registrada correctamente."
+            in mock_mensaje.call_args.args[0]
+        )
+
+        assert "Estado de la sesión: pendiente" in (
+            mock_mensaje.call_args.args[0]
         )
 
         mock_cancelar.assert_called_once_with()
+        mock_cargar.assert_called_once_with()
 
-    def test_registrar_sesion_sin_duracion(
+    def test_registrar_sesion_maneja_value_error(
         self,
         interfaz,
         control_sesiones,
-        widgets_formulario,
     ):
-        """
-        Verifica el error cuando falta la duración.
-        """
-        self.asignar_widgets_formulario(
-            interfaz,
-            widgets_formulario,
+        self.configurar_formulario_valido(
+            interfaz
         )
 
-        widgets_formulario["duracion"].valor = ""
-        widgets_formulario["intensidad"].valor = "MEDIA"
-        widgets_formulario["calorias"].valor = "300"
-
-        with patch.object(
-            interfaz,
-            "mostrar_error",
-        ) as mock_error:
-            interfaz.registrarSesion()
-
-        control_sesiones.registrar_sesion.assert_not_called()
-
-        mock_error.assert_called_once_with(
-            "Los campos Duracion, Intensidad y Calorias son obligatorios."
-        )
-
-    def test_registrar_sesion_sin_intensidad(
-        self,
-        interfaz,
-        control_sesiones,
-        widgets_formulario,
-    ):
-        """
-        Verifica el error cuando falta la intensidad.
-        """
-        self.asignar_widgets_formulario(
-            interfaz,
-            widgets_formulario,
-        )
-
-        widgets_formulario["duracion"].valor = "45"
-        widgets_formulario["intensidad"].valor = ""
-        widgets_formulario["calorias"].valor = "300"
-
-        with patch.object(
-            interfaz,
-            "mostrar_error",
-        ) as mock_error:
-            interfaz.registrarSesion()
-
-        control_sesiones.registrar_sesion.assert_not_called()
-
-        mock_error.assert_called_once_with(
-            "Los campos Duracion, Intensidad y Calorias son obligatorios."
-        )
-
-    def test_registrar_sesion_sin_calorias(
-        self,
-        interfaz,
-        control_sesiones,
-        widgets_formulario,
-    ):
-        """
-        Verifica el error cuando faltan las calorías.
-        """
-        self.asignar_widgets_formulario(
-            interfaz,
-            widgets_formulario,
-        )
-
-        widgets_formulario["duracion"].valor = "45"
-        widgets_formulario["intensidad"].valor = "MEDIA"
-        widgets_formulario["calorias"].valor = ""
-
-        with patch.object(
-            interfaz,
-            "mostrar_error",
-        ) as mock_error:
-            interfaz.registrarSesion()
-
-        control_sesiones.registrar_sesion.assert_not_called()
-
-        mock_error.assert_called_once_with(
-            "Los campos Duracion, Intensidad y Calorias son obligatorios."
-        )
-
-    def test_registrar_sesion_sin_campos_obligatorios(
-        self,
-        interfaz,
-        control_sesiones,
-        widgets_formulario,
-    ):
-        """
-        Verifica el error cuando faltan todos los campos obligatorios.
-        """
-        self.asignar_widgets_formulario(
-            interfaz,
-            widgets_formulario,
-        )
-
-        widgets_formulario["duracion"].valor = ""
-        widgets_formulario["intensidad"].valor = ""
-        widgets_formulario["calorias"].valor = ""
-
-        with patch.object(
-            interfaz,
-            "mostrar_error",
-        ) as mock_error:
-            interfaz.registrarSesion()
-
-        control_sesiones.registrar_sesion.assert_not_called()
-
-        mock_error.assert_called_once_with(
-            "Los campos Duracion, Intensidad y Calorias son obligatorios."
-        )
-
-    def test_registrar_sesion_con_duracion_invalida(
-        self,
-        interfaz,
-        control_sesiones,
-        widgets_formulario,
-    ):
-        """
-        Verifica el error cuando la duración no es un entero.
-        """
-        self.asignar_widgets_formulario(
-            interfaz,
-            widgets_formulario,
-        )
-
-        widgets_formulario["duracion"].valor = "cuarenta"
-        widgets_formulario["intensidad"].valor = "MEDIA"
-        widgets_formulario["calorias"].valor = "300"
-
-        with patch.object(
-            interfaz,
-            "mostrar_error",
-        ) as mock_error:
-            interfaz.registrarSesion()
-
-        control_sesiones.registrar_sesion.assert_not_called()
-
-        mock_error.assert_called_once_with(
-            "Duracion debe ser entero y Calorias decimal."
-        )
-
-    def test_registrar_sesion_con_calorias_invalidas(
-        self,
-        interfaz,
-        control_sesiones,
-        widgets_formulario,
-    ):
-        """
-        Verifica el error cuando las calorías no son numéricas.
-        """
-        self.asignar_widgets_formulario(
-            interfaz,
-            widgets_formulario,
-        )
-
-        widgets_formulario["duracion"].valor = "45"
-        widgets_formulario["intensidad"].valor = "MEDIA"
-        widgets_formulario["calorias"].valor = "muchas"
-
-        with patch.object(
-            interfaz,
-            "mostrar_error",
-        ) as mock_error:
-            interfaz.registrarSesion()
-
-        control_sesiones.registrar_sesion.assert_not_called()
-
-        mock_error.assert_called_once_with(
-            "Duracion debe ser entero y Calorias decimal."
-        )
-
-    def test_registrar_sesion_maneja_value_error_del_controlador(
-        self,
-        interfaz,
-        control_sesiones,
-        widgets_formulario,
-    ):
-        """
-        Verifica el manejo de ValueError lanzado por el controlador.
-        """
-        self.asignar_widgets_formulario(
-            interfaz,
-            widgets_formulario,
-        )
-
-        widgets_formulario["duracion"].valor = "45"
-        widgets_formulario["intensidad"].valor = "MEDIA"
-        widgets_formulario["calorias"].valor = "300"
-
-        control_sesiones.registrar_sesion.side_effect = ValueError(
-            "La intensidad no es válida"
+        control_sesiones.registrar_sesion.side_effect = (
+            ValueError("La intensidad no es válida")
         )
 
         with patch.object(
@@ -423,22 +561,13 @@ class TestInterfazRegistroSesion:
         self,
         interfaz,
         control_sesiones,
-        widgets_formulario,
     ):
-        """
-        Verifica el manejo de errores inesperados.
-        """
-        self.asignar_widgets_formulario(
-            interfaz,
-            widgets_formulario,
+        self.configurar_formulario_valido(
+            interfaz
         )
 
-        widgets_formulario["duracion"].valor = "45"
-        widgets_formulario["intensidad"].valor = "MEDIA"
-        widgets_formulario["calorias"].valor = "300"
-
-        control_sesiones.registrar_sesion.side_effect = RuntimeError(
-            "Error de base de datos"
+        control_sesiones.registrar_sesion.side_effect = (
+            RuntimeError("Error de base de datos")
         )
 
         with patch.object(
@@ -454,538 +583,20 @@ class TestInterfazRegistroSesion:
     def test_cancelar_registro_limpia_formulario(
         self,
         interfaz,
-        widgets_formulario,
     ):
-        """
-        Verifica que cancelarRegistro limpie todos los campos.
-        """
-        self.asignar_widgets_formulario(
-            interfaz,
-            widgets_formulario,
-        )
-
-        widgets_formulario["duracion"].valor = "45"
-        widgets_formulario["intensidad"].valor = "ALTA"
-        widgets_formulario["calorias"].valor = "400"
-        widgets_formulario["observaciones"].valor = "Buen entrenamiento"
-
-        interfaz.cancelarRegistro()
-
-        assert widgets_formulario["duracion"].valor == ""
-        assert widgets_formulario["intensidad"].valor == ""
-        assert widgets_formulario["calorias"].valor == ""
-        assert widgets_formulario["observaciones"].valor == ""
-
-    def asignar_widgets_completos(
-        self,
-        interfaz,
-        nombre="Caminata",
-        duracion="45",
-        intensidad="MEDIA",
-        calorias="300",
-        planificadas="3",
-        realizadas="2",
-        observaciones="Entrenamiento normal",
-    ):
-        """
-        Asigna todos los widgets requeridos por el formulario actual.
-        """
-        interfaz._id_rutina = 25
-
-        interfaz._ent_nombre_ejercicio = EntryFalso(nombre)
-        interfaz._ent_duracion = EntryFalso(duracion)
-        interfaz._cb_intensidad = ComboboxFalso(intensidad)
-        interfaz._ent_calorias = EntryFalso(calorias)
-        interfaz._ent_veces_planificadas = EntryFalso(planificadas)
-        interfaz._ent_veces_realizadas = EntryFalso(realizadas)
-        interfaz._ent_observaciones = EntryFalso(observaciones)
-
-
-    def test_propiedad_id_rutina_devuelve_valor_asignado(
-        self,
-        interfaz,
-    ):
-        """
-        Verifica que id_rutina devuelva la rutina configurada.
-        """
-        interfaz._id_rutina = 15
-
-        assert interfaz.id_rutina == 15
-
-
-    def test_propiedad_id_rutina_devuelve_none_si_no_existe(
-        self,
-        interfaz,
-    ):
-        """
-        Verifica compatibilidad cuando no se ejecutó __init__.
-        """
-        assert interfaz.id_rutina is None
-
-
-    def test_obtener_texto_devuelve_texto_limpio(
-        self,
-        interfaz,
-    ):
-        """
-        Verifica que _obtener_texto elimine espacios laterales.
-        """
-        interfaz._ent_prueba = EntryFalso("  texto de prueba  ")
-
-        resultado = interfaz._obtener_texto("_ent_prueba")
-
-        assert resultado == "texto de prueba"
-
-
-    def test_obtener_texto_devuelve_vacio_si_widget_no_existe(
-        self,
-        interfaz,
-    ):
-        """
-        Verifica que un widget inexistente se trate como texto vacío.
-        """
-        resultado = interfaz._obtener_texto("_widget_inexistente")
-
-        assert resultado == ""
-
-
-    def test_modo_compatibilidad_es_verdadero_sin_campos_completos(
-        self,
-        interfaz,
-        widgets_formulario,
-    ):
-        """
-        Verifica el modo usado por pruebas antiguas.
-        """
-        self.asignar_widgets_formulario(
-            interfaz,
-            widgets_formulario,
-        )
-
-        assert interfaz._es_modo_compatibilidad_tests() is True
-
-
-    def test_modo_compatibilidad_es_falso_con_formulario_completo(
-        self,
-        interfaz,
-    ):
-        """
-        Verifica el modo real de la aplicación.
-        """
-        self.asignar_widgets_completos(interfaz)
-
-        assert interfaz._es_modo_compatibilidad_tests() is False
-
-
-    def test_registrar_sesion_modo_completo_correctamente(
-        self,
-        interfaz,
-        control_sesiones,
-    ):
-        """
-        Verifica el registro usando todos los campos del formulario.
-        """
-        self.asignar_widgets_completos(
-            interfaz,
-            nombre="Sentadillas",
-            duracion="30",
-            intensidad="ALTA",
-            calorias="420.5",
-            planificadas="4",
-            realizadas="4",
-            observaciones="Serie completada",
-        )
-
-        fecha_prueba = date(2026, 9, 25)
-
-        sesion = SimpleNamespace(
-            completada=True,
-            veces_realizadas=4,
-            veces_planificadas=4,
-        )
-
-        control_sesiones.registrar_sesion.return_value = sesion
-
-        with patch(
-            "src.interfaz.interfaz_registro_sesion.date"
-        ) as mock_date, patch.object(
-            interfaz,
-            "mostrar_mensaje",
-        ) as mock_mensaje, patch.object(
-            interfaz,
-            "cancelarRegistro",
-        ) as mock_cancelar:
-            mock_date.today.return_value = fecha_prueba
-
-            interfaz.registrarSesion()
-
-        control_sesiones.registrar_sesion.assert_called_once_with(
-            cliente=10,
-            rutina=25,
-            fecha=fecha_prueba,
-            nombre_ejercicio="Sentadillas",
-            duracion_real=30,
-            intensidad_real="ALTA",
-            calorias_quemadas=420.5,
-            observaciones="Serie completada",
-            veces_planificadas=4,
-            veces_realizadas=4,
-        )
-
-        mock_mensaje.assert_called_once_with(
-            "Sesión registrada correctamente.\n"
-            "Estado: completada\n"
-            "Cumplimiento: 4/4"
-        )
-
-        mock_cancelar.assert_called_once_with()
-
-
-    def test_registrar_sesion_completa_muestra_estado_pendiente(
-        self,
-        interfaz,
-        control_sesiones,
-    ):
-        """
-        Verifica el mensaje cuando la sesión queda pendiente.
-        """
-        self.asignar_widgets_completos(
-            interfaz,
-            planificadas="5",
-            realizadas="2",
-        )
-
-        control_sesiones.registrar_sesion.return_value = (
-            SimpleNamespace(
-                completada=False,
-                veces_realizadas=2,
-                veces_planificadas=5,
-            )
-        )
-
-        with patch.object(
-            interfaz,
-            "mostrar_mensaje",
-        ) as mock_mensaje, patch.object(
-            interfaz,
-            "cancelarRegistro",
-        ):
-            interfaz.registrarSesion()
-
-        mock_mensaje.assert_called_once_with(
-            "Sesión registrada correctamente.\n"
-            "Estado: pendiente\n"
-            "Cumplimiento: 2/5"
-        )
-
-
-    def test_registrar_sesion_completa_sin_nombre(
-        self,
-        interfaz,
-        control_sesiones,
-    ):
-        """
-        Verifica que el nombre del ejercicio sea obligatorio.
-        """
-        self.asignar_widgets_completos(
-            interfaz,
-            nombre="",
-        )
-
-        with patch.object(
-            interfaz,
-            "mostrar_error",
-        ) as mock_error:
-            interfaz.registrarSesion()
-
-        control_sesiones.registrar_sesion.assert_not_called()
-
-        mock_error.assert_called_once_with(
-            "El nombre del ejercicio es obligatorio."
-        )
-
-
-    def test_registrar_sesion_completa_nombre_mayor_a_100(
-        self,
-        interfaz,
-        control_sesiones,
-    ):
-        """
-        Verifica el límite de longitud del nombre del ejercicio.
-        """
-        self.asignar_widgets_completos(
-            interfaz,
-            nombre="E" * 101,
-        )
-
-        with patch.object(
-            interfaz,
-            "mostrar_error",
-        ) as mock_error:
-            interfaz.registrarSesion()
-
-        control_sesiones.registrar_sesion.assert_not_called()
-
-        mock_error.assert_called_once_with(
-            "El nombre del ejercicio no puede superar "
-            "100 caracteres."
-        )
-
-
-    def test_registrar_sesion_completa_sin_repeticiones(
-        self,
-        interfaz,
-        control_sesiones,
-    ):
-        """
-        Verifica que las repeticiones sean obligatorias.
-        """
-        self.asignar_widgets_completos(
-            interfaz,
-            planificadas="",
-            realizadas="",
-        )
-
-        with patch.object(
-            interfaz,
-            "mostrar_error",
-        ) as mock_error:
-            interfaz.registrarSesion()
-
-        control_sesiones.registrar_sesion.assert_not_called()
-
-        mock_error.assert_called_once_with(
-            "Complete duración, intensidad, calorías, "
-            "veces planificadas y veces realizadas."
-        )
-
-
-    def test_registrar_sesion_duracion_cero(
-        self,
-        interfaz,
-        control_sesiones,
-    ):
-        """
-        Verifica que la duración sea mayor que cero.
-        """
-        self.asignar_widgets_completos(
-            interfaz,
-            duracion="0",
-        )
-
-        with patch.object(
-            interfaz,
-            "mostrar_error",
-        ) as mock_error:
-            interfaz.registrarSesion()
-
-        control_sesiones.registrar_sesion.assert_not_called()
-
-        mock_error.assert_called_once_with(
-            "La duración debe ser mayor que cero."
-        )
-
-
-    def test_registrar_sesion_calorias_negativas(
-        self,
-        interfaz,
-        control_sesiones,
-    ):
-        """
-        Verifica que las calorías no sean negativas.
-        """
-        self.asignar_widgets_completos(
-            interfaz,
-            calorias="-25.5",
-        )
-
-        with patch.object(
-            interfaz,
-            "mostrar_error",
-        ) as mock_error:
-            interfaz.registrarSesion()
-
-        control_sesiones.registrar_sesion.assert_not_called()
-
-        mock_error.assert_called_once_with(
-            "Las calorías no pueden ser negativas."
-        )
-
-
-    def test_registrar_sesion_planificadas_cero(
-        self,
-        interfaz,
-        control_sesiones,
-    ):
-        """
-        Verifica que las veces planificadas sean mayores que cero.
-        """
-        self.asignar_widgets_completos(
-            interfaz,
-            planificadas="0",
-        )
-
-        with patch.object(
-            interfaz,
-            "mostrar_error",
-        ) as mock_error:
-            interfaz.registrarSesion()
-
-        control_sesiones.registrar_sesion.assert_not_called()
-
-        mock_error.assert_called_once_with(
-            "Las veces planificadas deben ser mayores que cero."
-        )
-
-
-    def test_registrar_sesion_realizadas_negativas(
-        self,
-        interfaz,
-        control_sesiones,
-    ):
-        """
-        Verifica que las veces realizadas no sean negativas.
-        """
-        self.asignar_widgets_completos(
-            interfaz,
-            realizadas="-1",
-        )
-
-        with patch.object(
-            interfaz,
-            "mostrar_error",
-        ) as mock_error:
-            interfaz.registrarSesion()
-
-        control_sesiones.registrar_sesion.assert_not_called()
-
-        mock_error.assert_called_once_with(
-            "Las veces realizadas no pueden ser negativas."
-        )
-
-
-    def test_registrar_sesion_realizadas_superan_planificadas(
-        self,
-        interfaz,
-        control_sesiones,
-    ):
-        """
-        Verifica que las repeticiones realizadas no superen las planificadas.
-        """
-        self.asignar_widgets_completos(
-            interfaz,
-            planificadas="3",
-            realizadas="4",
-        )
-
-        with patch.object(
-            interfaz,
-            "mostrar_error",
-        ) as mock_error:
-            interfaz.registrarSesion()
-
-        control_sesiones.registrar_sesion.assert_not_called()
-
-        mock_error.assert_called_once_with(
-            "Las veces realizadas no pueden superar "
-            "las planificadas."
-        )
-
-
-    def test_registrar_sesion_repeticiones_no_numericas(
-        self,
-        interfaz,
-        control_sesiones,
-    ):
-        """
-        Verifica que repeticiones no numéricas se manejen como ValueError.
-        """
-        self.asignar_widgets_completos(
-            interfaz,
-            planificadas="tres",
-            realizadas="dos",
-        )
-
-        with patch.object(
-            interfaz,
-            "mostrar_error",
-        ) as mock_error:
-            interfaz.registrarSesion()
-
-        control_sesiones.registrar_sesion.assert_not_called()
-
-        mock_error.assert_called_once_with(
-            "Duracion debe ser entero y Calorias decimal."
-        )
-
-
-    def test_cancelar_registro_limpia_formulario_completo(
-        self,
-        interfaz,
-    ):
-        """
-        Verifica que cancelarRegistro limpie todos los widgets actuales.
-        """
-        self.asignar_widgets_completos(
-            interfaz,
-            nombre="Bicicleta",
-            duracion="50",
-            intensidad="ALTA",
-            calorias="600",
-            planificadas="5",
-            realizadas="3",
-            observaciones="Observación",
+        interfaz._ent_duracion.set("45")
+        interfaz._ent_veces_realizadas.set("2")
+        interfaz._cb_intensidad.set("ALTA")
+        interfaz._ent_observaciones.set(
+            "Buen entrenamiento"
         )
 
         interfaz.cancelarRegistro()
 
-        assert interfaz._ent_nombre_ejercicio.valor == ""
-        assert interfaz._ent_duracion.valor == ""
-        assert interfaz._cb_intensidad.valor == ""
-        assert interfaz._ent_calorias.valor == ""
-        assert interfaz._ent_veces_planificadas.valor == ""
-        assert interfaz._ent_veces_realizadas.valor == ""
-        assert interfaz._ent_observaciones.valor == ""
-
-    def test_constructor_inicializa_interfaz_y_muestra_formulario(
-        self,
-        control_sesiones,
-    ):
-        """
-        Verifica que el constructor configure la interfaz completa.
-        """
-        master = MagicMock()
-
-        with patch(
-            "src.interfaz.interfaz_registro_sesion.InterfazBase.__init__",
-            return_value=None,
-        ) as mock_base_init, patch.object(
-            InterfazRegistroSesion,
-            "pack",
-        ) as mock_pack, patch.object(
-            InterfazRegistroSesion,
-            "mostrarFormularioSesion",
-        ) as mock_formulario:
-            interfaz = InterfazRegistroSesion(
-                master=master,
-                control_sesiones=control_sesiones,
-                id_cliente=10,
-                id_rutina=25,
-            )
-
-        mock_base_init.assert_called_once_with(
-            master,
-            controlador=control_sesiones,
-            padding=10,
+        assert interfaz._ent_duracion.get() == ""
+        assert (
+            interfaz._ent_veces_realizadas.get()
+            == ""
         )
-
-        mock_pack.assert_called_once_with(
-            fill="both",
-            expand=True,
-        )
-
-        mock_formulario.assert_called_once_with()
-
-        assert interfaz.id_cliente == 10
-        assert interfaz.id_rutina == 25
-        
+        assert interfaz._cb_intensidad.get() == ""
+        assert interfaz._ent_observaciones.get() == ""

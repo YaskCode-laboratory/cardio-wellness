@@ -30,6 +30,9 @@ class WidgetFalso:
     def grid(self, *args, **kwargs):
         pass
 
+    def grid_remove(self):
+        self.pack_ocultado = True
+
     def destroy(self):
         self.destruido = True
 
@@ -598,11 +601,15 @@ class TestInterfazGestionRutinas:
 
         assert interfaz._obtener_id_rutina_tabla() is None
 
-    def test_editar_rutina_sin_seleccion(
+    def test_editar_rutina_con_seleccion_sin_preparar_edicion(
         self,
         interfaz,
     ):
         interfaz._tree = TreeviewFalso()
+        interfaz._tree.seleccion_actual = [
+            "fila-1"
+        ]
+        interfaz._id_rutina_editando = None
 
         with patch.object(
             interfaz,
@@ -611,23 +618,8 @@ class TestInterfazGestionRutinas:
             interfaz.editarRutina()
 
         mock_error.assert_called_once_with(
-            "Seleccione una rutina para editar."
-        )
-
-    def test_editar_rutina_con_id_muestra_mensaje(
-        self,
-        interfaz,
-    ):
-        interfaz._id_rutina_editando = 5
-
-        with patch.object(
-            interfaz,
-            "mostrar_mensaje",
-        ) as mock_mensaje:
-            interfaz.editarRutina()
-
-        mock_mensaje.assert_called_once_with(
-            "Funcionalidad de edicion pendiente de implementar."
+            "Seleccione una rutina y presione "
+            "Editar datos antes de guardar."
         )
 
     def test_eliminar_rutina_sin_seleccion(
@@ -754,8 +746,14 @@ class TestInterfazGestionRutinas:
         interfaz,
         control_rutinas,
     ):
+        interfaz.tk = MagicMock()
+
         interfaz._tree = TreeviewFalso()
-        interfaz._tree.seleccion_actual = ["fila-1"]
+
+        interfaz._tree.seleccion_actual = [
+            "fila-1"
+        ]
+
         interfaz._tree.items = {
             "fila-1": {
                 "values": (
@@ -765,10 +763,18 @@ class TestInterfazGestionRutinas:
             }
         }
 
+        interfaz._obtener_id_administrador = MagicMock(
+            return_value=20
+        )
+
         with patch(
             "src.interfaz.interfaz_gestion_rutinas"
             ".simpledialog.askinteger",
             return_value=10,
+        ), patch(
+            "src.interfaz.interfaz_gestion_rutinas"
+            ".simpledialog.askstring",
+            return_value="",
         ), patch.object(
             interfaz,
             "mostrar_mensaje",
@@ -776,15 +782,17 @@ class TestInterfazGestionRutinas:
             interfaz.asignarRutina()
 
         control_rutinas.asignar_rutina.assert_called_once_with(
-            id_cliente=10,
-            id_rutina=5,
+            cliente=10,
+            rutina=5,
+            asignado_por=20,
+            observaciones="",
         )
 
         mock_mensaje.assert_called_once_with(
             "Rutina 5 asignada al cliente 10."
         )
 
-    def test_al_seleccionar_rutina_actualiza_ids(
+    def test_al_seleccionar_rutina_actualiza_vista_previa(
         self,
         interfaz,
     ):
@@ -801,7 +809,7 @@ class TestInterfazGestionRutinas:
 
         interfaz._al_seleccionar_rutina()
 
-        assert interfaz._id_rutina_editando == 7
+        assert interfaz._id_rutina_editando is None
         assert interfaz._id_rutina_vista_previa == 7
 
     def test_cancelar_edicion_rutina_limpia_estado(
@@ -1370,6 +1378,9 @@ class TestInterfazGestionRutinas:
             "src.interfaz.interfaz_gestion_rutinas.ttk.LabelFrame",
             side_effect=LabelFrameFalso,
         ), patch(
+            "src.interfaz.interfaz_gestion_rutinas.ttk.Frame",
+            side_effect=FrameFalso,
+        ), patch(
             "src.interfaz.interfaz_gestion_rutinas.ttk.Label",
             side_effect=LabelFalso,
         ), patch(
@@ -1382,7 +1393,7 @@ class TestInterfazGestionRutinas:
             "src.interfaz.interfaz_gestion_rutinas.ttk.Treeview",
             side_effect=TreeviewFalso,
         ):
-            interfaz.mostrarEjerciciosRutina()
+         interfaz.mostrarEjerciciosRutina()
 
         assert isinstance(
             interfaz._frame_ejercicios_rutina,
@@ -1450,8 +1461,9 @@ class TestInterfazGestionRutinas:
         interfaz._limpiar_formulario.assert_called_once_with()
         interfaz.mostrarRutinas.assert_called_once_with()
 
+        interfaz._limpiar_formulario.assert_called_once_with()
+        interfaz.mostrarRutinas.assert_called_once_with()
         interfaz._cargar_datos_ejercicios.assert_called_once_with()
-
         interfaz._limpiar_vista_previa.assert_called_once_with()
 
     def test_editar_rutina_en_produccion_correctamente(
@@ -1535,8 +1547,11 @@ class TestInterfazGestionRutinas:
             interfaz.editarRutina()
 
         mock_error.assert_called_once_with(
-            "Seleccione una rutina para editar."
-        )
+    (
+        "Seleccione una rutina y presione "
+        "Editar datos antes de guardar."
+    )
+)
 
     def test_editar_rutina_muestra_error_si_no_existe(
         self,
@@ -1658,8 +1673,8 @@ class TestInterfazGestionRutinas:
             "Rutina eliminada correctamente."
         )
 
-        interfaz._cargar_datos_ejercicios.assert_called_once_with()
-
+        interfaz.mostrarRutinas.assert_called_once_with()
+        interfaz._cargar_datos_ejercicios.assert_not_called()
         interfaz._limpiar_vista_previa.assert_called_once_with()
 
     def test_asignar_rutina_en_produccion(
@@ -1787,35 +1802,15 @@ class TestInterfazGestionRutinas:
 
         interfaz._al_seleccionar_rutina()
 
-        assert interfaz._id_rutina_editando == 1
+        assert interfaz._id_rutina_editando is None
 
         assert interfaz._id_rutina_vista_previa == 1
 
-        assert widgets_formulario["nombre"].valor == (
-            "Rutina inicial"
-        )
+        assert "text" not in interfaz._lbl_modo.configuracion
 
-        assert widgets_formulario["descripcion"].valor == (
-            "Rutina de inicio"
-        )
+        interfaz._mostrar_ejercicios_asociados.assert_not_called()
 
-        assert widgets_formulario["objetivo"].valor == (
-            "Mejorar resistencia"
-        )
-
-        assert widgets_formulario["nivel"].valor == "BASICO"
-
-        assert widgets_formulario["duracion"].valor == "8"
-
-        assert interfaz._lbl_modo.configuracion["text"] == (
-            "Modo: editando rutina #1"
-        )
-
-        interfaz._mostrar_ejercicios_asociados.assert_called_once_with(
-            1
-        )
-
-    def test_al_seleccionar_rutina_muestra_error(
+    def test_al_seleccionar_rutina_no_consulta_detalle_para_editar(
         self,
         interfaz,
         control_rutinas,
@@ -1847,20 +1842,21 @@ class TestInterfazGestionRutinas:
         ) as mock_error:
             interfaz._al_seleccionar_rutina()
 
-        mock_error.assert_called_once_with(
-            "No se pudo cargar la rutina 1: "
-            "No se encontró la rutina."
-        )
+        assert interfaz._id_rutina_editando is None
+        assert interfaz._id_rutina_vista_previa == 1
 
-    def test_editar_con_doble_click_llama_editar_rutina(
+        control_rutinas.buscar_por_id.assert_not_called()
+        mock_error.assert_not_called()
+
+    def test_editar_con_doble_click_prepara_edicion(
         self,
         interfaz,
     ):
-        interfaz.editarRutina = MagicMock()
+        interfaz.preparar_edicion_rutina = MagicMock()
 
         interfaz._editar_con_doble_click()
 
-        interfaz.editarRutina.assert_called_once_with()
+        interfaz.preparar_edicion_rutina.assert_called_once_with()
 
     def test_cargar_datos_ejercicios_sin_control_no_hace_nada(
         self,
@@ -2318,12 +2314,20 @@ class TestInterfazGestionRutinas:
 
         interfaz._al_seleccionar_rutina()
 
-        assert interfaz._id_rutina_editando == 1
+        assert interfaz._id_rutina_editando is None
         assert interfaz._id_rutina_vista_previa == 1
 
-        interfaz._mostrar_ejercicios_asociados.assert_called_once_with(
-            1
-        )
+        assert widgets_formulario["nombre"].valor == ""
+        assert widgets_formulario["descripcion"].valor == ""
+        assert widgets_formulario["objetivo"].valor == ""
+        assert widgets_formulario["nivel"].valor == ""
+        assert widgets_formulario["duracion"].valor == ""
+
+        assert "text" not in interfaz._lbl_modo.configuracion
+
+        assert interfaz._id_rutina_vista_previa == 1
+
+        interfaz._mostrar_ejercicios_asociados.assert_not_called()
 
     def test_cancelar_edicion_sin_widgets_opcionales(
         self,
@@ -2502,27 +2506,27 @@ class TestInterfazGestionRutinas:
         interfaz,
     ):
         interfaz._tree = TreeviewFalso()
-
         interfaz._tree.seleccion_actual = [
             "fila-1"
         ]
+        interfaz._id_rutina_editando = None
 
         with patch.object(
             interfaz,
-            "mostrar_mensaje",
-        ) as mock_mensaje:
+            "mostrar_error",
+        ) as mock_error:
             interfaz.editarRutina()
 
-        mock_mensaje.assert_called_once_with(
-            "Funcionalidad de edicion pendiente de implementar."
+        mock_error.assert_called_once_with(
+            "Seleccione una rutina y presione "
+            "Editar datos antes de guardar."
         )
 
-    def test_editar_rutina_produccion_obtiene_id_desde_tree(
+    def test_editar_rutina_produccion_no_guarda_sin_preparar_edicion(
         self,
         interfaz,
         control_rutinas,
         widgets_formulario,
-        rutina,
     ):
         interfaz.tk = MagicMock()
 
@@ -2536,11 +2540,9 @@ class TestInterfazGestionRutinas:
         )
 
         interfaz._tree = TreeviewFalso()
-
         interfaz._tree.seleccion_actual = [
             "fila-1"
         ]
-
         interfaz._tree.items = {
             "fila-1": {
                 "values": (
@@ -2550,41 +2552,23 @@ class TestInterfazGestionRutinas:
             }
         }
 
-        control_rutinas.buscar_por_id.return_value = rutina
+        interfaz._id_rutina_editando = None
 
-        interfaz._obtener_id_administrador = MagicMock(
-            return_value=20
-        )
-
-        interfaz.mostrarRutinas = MagicMock()
-
-        interfaz._cargar_datos_ejercicios = MagicMock()
-
-        with patch(
-            "src.interfaz.interfaz_gestion_rutinas.Rutina",
-        ) as mock_rutina, patch.object(
+        with patch.object(
             interfaz,
-            "mostrar_mensaje",
-        ) as mock_mensaje:
-
+            "mostrar_error",
+        ) as mock_error:
             interfaz.editarRutina()
 
-        assert interfaz._id_rutina_editando == 5
+        assert interfaz._id_rutina_editando is None
 
-        mock_rutina.assert_called_once()
+        control_rutinas.buscar_por_id.assert_not_called()
+        control_rutinas.actualizar_rutina.assert_not_called()
 
-        control_rutinas.actualizar_rutina.assert_called_once_with(
-            mock_rutina.return_value,
-            20,
+        mock_error.assert_called_once_with(
+            "Seleccione una rutina y presione "
+            "Editar datos antes de guardar."
         )
-
-        mock_mensaje.assert_called_once_with(
-            "Rutina actualizada correctamente."
-        )
-
-        interfaz.mostrarRutinas.assert_called_once_with()
-
-        interfaz._cargar_datos_ejercicios.assert_called_once_with()
 
     def test_eliminar_rutina_produccion_muestra_error(
         self,

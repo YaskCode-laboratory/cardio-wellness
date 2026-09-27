@@ -25,16 +25,34 @@ def mock_sesion_dao():
 @pytest.fixture
 def controlador(
     mock_sesion_dao,
-    tmp_path,
 ):
     """
-    Crea el controlador con un archivo de auditoría temporal.
+    Crea el controlador con todas sus dependencias simuladas.
+
+    Las calorías se calculan automáticamente según el peso
+    del cliente; por eso se entrega un cliente simulado con
+    peso válido.
     """
-    ruta_log = tmp_path / "logs" / "LOG_CARDIO.txt"
+    cliente_dao = Mock()
+    cliente_dao.buscar_por_id.return_value = (
+        SimpleNamespace(
+            id_usuario=10,
+            peso=Decimal("70.0"),
+        )
+    )
+
+    ejercicio_dao = Mock()
+    asignacion_dao = Mock()
+    asignacion_ejercicio_dao = Mock()
 
     return ControlSesiones(
         sesion_dao=mock_sesion_dao,
-        ruta_log=str(ruta_log),
+        cliente_dao=cliente_dao,
+        ejercicio_dao=ejercicio_dao,
+        asignacion_dao=asignacion_dao,
+        asignacion_ejercicio_dao=(
+            asignacion_ejercicio_dao
+        ),
     )
 
 
@@ -113,9 +131,10 @@ def test_registrar_sesion_exitoso_y_auditoria(
     rutina_mock = Mock()
     rutina_mock.id_rutina = 3
 
-    with patch(
-        "src.controladores.control_sesiones.log_generar_progreso",
-    ) as mock_generar_progreso:
+    with patch.object(
+    controlador,
+    "_registrar_log",
+) as mock_registrar_log:
         sesion = controlador.registrar_sesion(
             cliente=cliente_mock,
             rutina=rutina_mock,
@@ -134,7 +153,7 @@ def test_registrar_sesion_exitoso_y_auditoria(
     assert sesion.nombre_ejercicio == "Circuito cardio"
     assert sesion.duracion_real == 45
     assert sesion.intensidad_real == Intensidad.ALTA
-    assert sesion.calorias_quemadas == Decimal("400")
+    assert sesion.calorias_quemadas == Decimal("441.00")
     assert sesion.veces_planificadas == 2
     assert sesion.veces_realizadas == 2
 
@@ -142,19 +161,15 @@ def test_registrar_sesion_exitoso_y_auditoria(
         sesion
     )
 
-    mock_generar_progreso.assert_called_once_with(
-        "CLIENTE_15"
-    )
+    mock_registrar_log.assert_called_once()
 
-    contenido_log = controlador.ruta_log.read_text(
-        encoding="utf-8"
-    )
+    argumentos = mock_registrar_log.call_args.args
 
-    assert "CLIENTE_15, REGISTRO_SESION" in contenido_log
-    assert "Rutina: 3" in contenido_log
-    assert "Ejercicio: Circuito cardio" in contenido_log
-    assert "Realizadas: 2/2" in contenido_log
-
+    assert argumentos[0] == "CLIENTE_15"
+    assert argumentos[1] == "REGISTRO_SESION"
+    assert "Rutina: 3" in argumentos[2]
+    assert "Ejercicio: Circuito cardio" in argumentos[2]
+    assert "Realizadas: 2/2" in argumentos[2]
 
 def test_registrar_sesion_con_ids_directos_y_fecha_datetime(
     controlador,
@@ -167,10 +182,8 @@ def test_registrar_sesion_con_ids_directos_y_fecha_datetime(
         lambda sesion: sesion
     )
 
-    with patch(
-        "src.controladores.control_sesiones.log_generar_progreso",
-    ):
-        sesion = controlador.registrar_sesion(
+
+    sesion = controlador.registrar_sesion(
             cliente=5,
             rutina=2,
             nombre_ejercicio="Caminata",
@@ -186,7 +199,7 @@ def test_registrar_sesion_con_ids_directos_y_fecha_datetime(
     assert sesion.id_rutina == 2
     assert sesion.fecha == date(2026, 2, 10)
     assert sesion.intensidad_real == Intensidad.MEDIA
-    assert sesion.calorias_quemadas == Decimal("250.5")
+    assert sesion.calorias_quemadas == Decimal("202.13")
     assert sesion.observaciones == ""
 
 
@@ -201,10 +214,8 @@ def test_registrar_sesion_usa_fecha_actual_si_no_se_indica(
         lambda sesion: sesion
     )
 
-    with patch(
-        "src.controladores.control_sesiones.log_generar_progreso",
-    ):
-        sesion = controlador.registrar_sesion(
+
+    sesion = controlador.registrar_sesion(
             cliente=1,
             rutina=1,
             nombre_ejercicio="Bicicleta",
@@ -344,40 +355,6 @@ def test_registrar_sesion_valida_duracion(
             duracion_real=duracion,
             intensidad_real="MEDIA",
             calorias_quemadas=200,
-        )
-
-
-@pytest.mark.parametrize(
-    "calorias,mensaje",
-    [
-        (True, "calorías deben ser numéricas"),
-        (False, "calorías deben ser numéricas"),
-        ("200", "calorías deben ser numéricas"),
-        (None, "calorías deben ser numéricas"),
-        ([], "calorías deben ser numéricas"),
-        (-1, "calorías no pueden ser negativas"),
-        (-0.5, "calorías no pueden ser negativas"),
-    ],
-)
-def test_registrar_sesion_valida_calorias(
-    controlador,
-    calorias,
-    mensaje,
-):
-    """
-    Verifica validación de calorías.
-    """
-    with pytest.raises(
-        ValueError,
-        match=mensaje,
-    ):
-        controlador.registrar_sesion(
-            cliente=1,
-            rutina=1,
-            nombre_ejercicio="Caminata",
-            duracion_real=30,
-            intensidad_real="MEDIA",
-            calorias_quemadas=calorias,
         )
 
 
@@ -876,11 +853,19 @@ def test_eliminar_sesion_sin_resultado_no_registra_log(
     """
     mock_sesion_dao.eliminar_por_id.return_value = False
 
-    resultado = controlador.eliminar_sesion(99)
+    with patch.object(
+        controlador,
+        "_registrar_log",
+    ) as mock_registrar_log:
+        resultado = controlador.eliminar_sesion(99)
 
     assert resultado is False
 
-    assert not controlador.ruta_log.exists()
+    mock_sesion_dao.eliminar_por_id.assert_called_once_with(
+        99
+    )
+
+    mock_registrar_log.assert_not_called()
 
 
 @pytest.mark.parametrize(
@@ -1235,56 +1220,6 @@ def test_normalizar_intensidad_rechaza_valores_invalidos(
         ValueError,
     ):
         ControlSesiones._normalizar_intensidad(valor)
-
-def test_registrar_sesion_rechaza_calorias_no_convertibles(
-    controlador,
-):
-    """
-    Verifica el manejo de un valor numérico cuyo texto no puede
-    convertirse a Decimal.
-    """
-
-    class EnteroConTextoInvalido(int):
-        def __str__(self):
-            return "no_es_decimal"
-
-    with pytest.raises(
-        ValueError,
-        match="calorías deben ser un valor válido",
-    ):
-        controlador.registrar_sesion(
-            cliente=1,
-            rutina=1,
-            nombre_ejercicio="Caminata",
-            duracion_real=30,
-            intensidad_real="MEDIA",
-            calorias_quemadas=EnteroConTextoInvalido(200),
-        )
-
-def test_registrar_sesion_rechaza_calorias_no_convertibles(
-    controlador,
-):
-    """
-    Verifica que se rechace un valor numérico cuyo texto
-    no puede convertirse a Decimal.
-    """
-
-    class EnteroConTextoInvalido(int):
-        def __str__(self):
-            return "no_es_decimal"
-
-    with pytest.raises(
-        ValueError,
-        match="calorías deben ser un valor válido",
-    ):
-        controlador.registrar_sesion(
-            cliente=1,
-            rutina=1,
-            nombre_ejercicio="Caminata",
-            duracion_real=30,
-            intensidad_real="MEDIA",
-            calorias_quemadas=EnteroConTextoInvalido(200),
-        )
 
 
 def test_actualizar_sesion_rechaza_realizadas_mayores_planificadas(
