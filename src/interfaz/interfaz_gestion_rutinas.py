@@ -74,6 +74,13 @@ class InterfazGestionRutinas(InterfazBase):
         if self._control_ejercicios is not None:
             self._cargar_datos_ejercicios()
 
+        if "tk" in self.__dict__:
+            self.winfo_toplevel().bind(
+                "<<EjerciciosActualizados>>",
+                self._actualizar_ejercicios_disponibles,
+                add="+",
+            )
+
     @property
     def control_rutinas(self) -> ControlRutinas:
         """Devuelve el controlador de rutinas."""
@@ -82,12 +89,32 @@ class InterfazGestionRutinas(InterfazBase):
     def _es_modo_prueba_sin_tk(self) -> bool:
         """
         Detecta instancias creadas mediante object.__new__
-        sin widgets reales de Tkinter.
+        o constructores simulados sin widgets reales de Tkinter.
         """
-        return not hasattr(
-            self,
-            "tk",
-        )
+        return "tk" not in self.__dict__
+
+        @staticmethod
+        def _obtener_valores_tree(
+            tree,
+            item_id,
+        ) -> tuple:
+            """
+            Obtiene values desde Treeview real o falso.
+            """
+            datos = tree.item(item_id)
+
+            if isinstance(datos, dict):
+                valores = datos.get(
+                    "values",
+                    (),
+                )
+            else:
+                valores = datos
+
+            if valores is None:
+                return ()
+
+            return tuple(valores)
 
     @staticmethod
     def _obtener_valores_tree(
@@ -95,7 +122,8 @@ class InterfazGestionRutinas(InterfazBase):
         item_id,
     ) -> tuple:
         """
-        Obtiene values desde Treeview real o falso.
+        Obtiene los valores de una fila desde un Treeview real
+        o desde el Treeview falso utilizado en las pruebas.
         """
         datos = tree.item(item_id)
 
@@ -329,12 +357,16 @@ class InterfazGestionRutinas(InterfazBase):
         )
 
         ttk.Button(
-            botones,
-            text="Asignar",
+            form,
+            text="Asignar rutina a cliente",
             command=self.asignarRutina,
-        ).pack(
-            side="left",
-            padx=3,
+        ).grid(
+            row=4,
+            column=0,
+            columnspan=4,
+            sticky="ew",
+            padx=5,
+            pady=(0, 8),
         )
 
     def mostrarRutinas(self) -> None:
@@ -1306,6 +1338,28 @@ class InterfazGestionRutinas(InterfazBase):
 
         if frame is not None:
             frame.pack_forget()
+
+    def _actualizar_ejercicios_disponibles(
+        self,
+        _evento=None,
+    ) -> None:
+        """
+        Recarga los ejercicios disponibles cuando se crea,
+        edita o elimina un ejercicio.
+        """
+        if self._control_ejercicios is None:
+            return
+
+        combo_ejercicios = getattr(
+            self,
+            "_cb_ejercicio_rutina",
+            None,
+        )
+
+        if combo_ejercicios is not None:
+            combo_ejercicios.set("")
+
+        self._cargar_datos_ejercicios()       
 
     def _cargar_datos_ejercicios(self) -> None:
         """

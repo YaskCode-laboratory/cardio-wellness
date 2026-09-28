@@ -295,3 +295,4 @@ if __name__ == "__main__":
         "✅ Logger configurado correctamente. "
         "Revisa logs/LOG_CARDIO.txt"
     )
+

@@ -42,6 +42,8 @@ class CalculadoraCalorias:
         "CARDIOVASCULAR": "CARDIO",
         "AEROBICO": "CARDIO",
         "AERÓBICO": "CARDIO",
+        "LISS": "CARDIO",
+        "CARDIO FUNCIONAL": "CARDIO",
         "FUERZAS": "FUERZA",
         "PESAS": "FUERZA",
         "MUSCULACION": "FUERZA",

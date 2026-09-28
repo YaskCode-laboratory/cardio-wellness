@@ -1,5 +1,5 @@
 from types import SimpleNamespace
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, call, patch
 import tkinter as tk
 
 import pytest
@@ -617,15 +617,6 @@ class TestInterfazCliente:
         """
         assert interfaz._obtener_master_widgets() is interfaz
 
-
-    def test_es_modo_pruebas_por_falta_autenticacion(
-        self,
-        interfaz,
-    ):
-        """
-        Verifica detección de instancia parcial.
-        """
-        assert interfaz._es_modo_pruebas() is True
 
 
     def test_es_modo_pruebas_por_falta_controladores(
@@ -1569,3 +1560,294 @@ class TestInterfazCliente:
                 )
 
         assert str(error.value) == mensaje
+
+    def test_consultar_rutina_activa_modo_real_programa_actualizacion(
+        self,
+        interfaz,
+    ):
+        """
+        Verifica que en modo normal se programe una
+        actualización automática de la rutina.
+        """
+        self.configurar_modo_real(interfaz)
+
+        notebook = MagicMock()
+        notebook.tk = MagicMock()
+
+        interfaz._notebook = notebook
+        interfaz.after = MagicMock()
+
+        with patch.object(
+            interfaz,
+            "_cargar_datos_rutina",
+        ), patch(
+            "src.interfaz.interfaz_cliente.ttk.Frame",
+            return_value=MagicMock(),
+        ), patch(
+            "src.interfaz.interfaz_cliente.ttk.Label",
+            return_value=MagicMock(),
+        ), patch(
+            "src.interfaz.interfaz_cliente.ttk.Button",
+            return_value=MagicMock(),
+        ), patch(
+            "src.interfaz.interfaz_cliente.ttk.Treeview",
+            return_value=MagicMock(),
+        ):
+            interfaz.consultarRutinaActiva()
+
+        interfaz.after.assert_called_once_with(
+            5000,
+            interfaz._actualizar_rutina_automaticamente,
+        )
+
+    def test_actualizar_rutina_automaticamente_recarga_y_reprograma(
+        self,
+        interfaz,
+    ):
+        """
+        Verifica que la actualización automática recargue
+        la rutina y programe la siguiente ejecución.
+        """
+        interfaz.winfo_exists = MagicMock(
+            return_value=True
+        )
+        interfaz.after = MagicMock()
+
+        with patch.object(
+            interfaz,
+            "_cargar_datos_rutina",
+        ) as mock_cargar:
+            interfaz._actualizar_rutina_automaticamente()
+
+        mock_cargar.assert_called_once_with()
+
+        interfaz.after.assert_called_once_with(
+            5000,
+            interfaz._actualizar_rutina_automaticamente,
+        )
+
+    def test_actualizar_rutina_automatica_no_hace_nada_si_ventana_no_existe(
+        self,
+        interfaz,
+    ):
+        """
+        Verifica que no se recargue ni se reprograme
+        si la ventana ya no existe.
+        """
+        interfaz.winfo_exists = MagicMock(
+            return_value=False
+        )
+        interfaz.after = MagicMock()
+
+        with patch.object(
+            interfaz,
+            "_cargar_datos_rutina",
+        ) as mock_cargar:
+            interfaz._actualizar_rutina_automaticamente()
+
+        mock_cargar.assert_not_called()
+        interfaz.after.assert_not_called()
+
+    def test_actualizar_rutina_automatica_ignora_tcl_error(
+        self,
+        interfaz,
+    ):
+        """
+        Verifica que no falle si Tkinter ya no puede
+        consultar el estado de la ventana.
+        """
+        interfaz.winfo_exists = MagicMock(
+            side_effect=tk.TclError("ventana destruida")
+        )
+        interfaz.after = MagicMock()
+
+        interfaz._actualizar_rutina_automaticamente()
+
+        interfaz.after.assert_not_called()
+
+    def test_cargar_datos_rutina_asignacion_sin_id_asignacion(
+        self,
+        interfaz,
+        control_rutinas,
+    ):
+        """
+        Verifica el mensaje cuando existe id_rutina,
+        pero no existe id_asignacion válido.
+        """
+        interfaz._lbl_rutina_nombre = MagicMock()
+        interfaz._tree_ejercicios = MagicMock()
+
+        control_rutinas.asignacion_dao.buscar_activa.return_value = (
+            SimpleNamespace(
+                id_rutina=5,
+                id_asignacion=None,
+            )
+        )
+
+        interfaz._cargar_datos_rutina()
+
+        interfaz._lbl_rutina_nombre.config.assert_called_once_with(
+            text=(
+                "La asignación activa no contiene "
+                "un identificador válido."
+            )
+        )
+
+        control_rutinas.buscar_por_id.assert_not_called()
+
+        control_rutinas.obtener_progreso_asignacion.assert_not_called()
+
+    def test_cargar_datos_rutina_muestra_guion_si_duracion_es_vacia(
+        self,
+        interfaz,
+        control_rutinas,
+    ):
+        """
+        Verifica que duración None se presente con guion.
+        """
+        interfaz._lbl_rutina_nombre = MagicMock()
+        interfaz._tree_ejercicios = MagicMock()
+
+        control_rutinas.asignacion_dao.buscar_activa.return_value = (
+            SimpleNamespace(
+                id_rutina=7,
+                id_asignacion=102,
+            )
+        )
+
+        control_rutinas.buscar_por_id.return_value = (
+            SimpleNamespace(
+                nombre="Rutina sin duración",
+                nivel="BÁSICO",
+            )
+        )
+
+        control_rutinas.obtener_progreso_asignacion.return_value = [
+            {
+                "nombre_ejercicio": "Caminata",
+                "tipo_ejercicio": "CARDIO",
+                "duracion_minutos": None,
+                "intensidad_ejercicio": "BAJA",
+            }
+        ]
+
+        interfaz._cargar_datos_rutina()
+
+        interfaz._tree_ejercicios.insert.assert_called_once_with(
+            "",
+            "end",
+            values=(
+                "Caminata",
+                "CARDIO",
+                "-",
+                "BAJA",
+            ),
+        )
+
+    @pytest.mark.parametrize(
+        ("asignacion", "resultado"),
+        [
+            (
+                {"id_asignacion": 101},
+                101,
+            ),
+            (
+                {"id_asignacion": "202"},
+                202,
+            ),
+            (
+                SimpleNamespace(id_asignacion=303),
+                303,
+            ),
+            (
+                SimpleNamespace(id_asignacion="404"),
+                404,
+            ),
+            (
+                {},
+                None,
+            ),
+            (
+                SimpleNamespace(),
+                None,
+            ),
+            (
+                {"id_asignacion": None},
+                None,
+            ),
+            (
+                {"id_asignacion": "invalido"},
+                None,
+            ),
+            (
+                SimpleNamespace(id_asignacion=[]),
+                None,
+            ),
+        ],
+    )
+    def test_obtener_id_asignacion(
+        self,
+        asignacion,
+        resultado,
+    ):
+        """
+        Verifica lectura y conversión segura de
+        id_asignacion desde diccionario u objeto.
+        """
+        assert (
+            InterfazCliente._obtener_id_asignacion(asignacion)
+            == resultado
+        )
+
+    def test_actualizar_rutina_activa_recarga_datos(
+        self,
+        interfaz,
+    ):
+        """
+        Verifica que la actualización manual recargue
+        los datos de la rutina activa.
+        """
+        with patch.object(
+            interfaz,
+            "_cargar_datos_rutina",
+        ) as mock_cargar:
+            interfaz._actualizar_rutina_activa()
+
+        mock_cargar.assert_called_once_with()
+
+    def test_cargar_datos_rutina_elimina_filas_anteriores(
+        self,
+        interfaz,
+        control_rutinas,
+    ):
+        """
+        Verifica que se eliminen las filas existentes
+        antes de consultar y mostrar la rutina activa.
+        """
+        interfaz._lbl_rutina_nombre = MagicMock()
+        interfaz._tree_ejercicios = MagicMock()
+
+        interfaz._tree_ejercicios.get_children.return_value = [
+            "fila_1",
+            "fila_2",
+        ]
+
+        control_rutinas.asignacion_dao.buscar_activa.return_value = (
+            None
+        )
+
+        interfaz._cargar_datos_rutina()
+
+        interfaz._tree_ejercicios.delete.assert_any_call(
+            "fila_1"
+        )
+
+        interfaz._tree_ejercicios.delete.assert_any_call(
+            "fila_2"
+        )
+
+        assert interfaz._tree_ejercicios.delete.call_count == 2
+
+        interfaz._lbl_rutina_nombre.config.assert_called_once_with(
+            text="No tienes una rutina asignada actualmente."
+        )

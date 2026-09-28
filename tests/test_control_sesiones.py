@@ -1247,3 +1247,526 @@ def test_actualizar_sesion_rechaza_realizadas_mayores_planificadas(
             match="no pueden superar las planificadas",
         ):
             controlador.actualizar_sesion(sesion_valida)
+
+def test_registrar_sesion_rechaza_cliente_inexistente(
+    controlador,
+):
+    controlador.cliente_dao.buscar_por_id.return_value = None
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            "No se encontró el cliente para calcular "
+            "las calorías estimadas."
+        ),
+    ):
+        controlador.registrar_sesion(
+            cliente=10,
+            rutina=5,
+            nombre_ejercicio="Caminata",
+            duracion_real=30,
+            intensidad_real="MEDIA",
+        )
+
+
+def test_registrar_sesion_rechaza_cliente_sin_peso(
+    controlador,
+):
+    controlador.cliente_dao.buscar_por_id.return_value = (
+        SimpleNamespace(
+            id_usuario=10,
+            peso=None,
+        )
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            "El cliente no tiene un peso registrado."
+        ),
+    ):
+        controlador.registrar_sesion(
+            cliente=10,
+            rutina=5,
+            nombre_ejercicio="Caminata",
+            duracion_real=30,
+            intensidad_real="MEDIA",
+        )
+
+
+def test_registrar_sesion_vinculada_finaliza_rutina_completada(
+    controlador,
+    mock_sesion_dao,
+):
+    """
+    Verifica el flujo completo de una sesión vinculada a un
+    ejercicio individual de una asignación activa:
+
+    - Valida la asignación activa del cliente.
+    - Valida el ejercicio individual.
+    - Obtiene el ejercicio global y su tipo.
+    - Registra la sesión.
+    - Detecta que todos los ejercicios fueron completados.
+    - Finaliza automáticamente la asignación.
+    """
+    controlador.cliente_dao.buscar_por_id.return_value = (
+        SimpleNamespace(
+            id_usuario=10,
+            peso=Decimal("70.0"),
+        )
+    )
+
+    asignacion = SimpleNamespace(
+        id_asignacion=50,
+        id_rutina=5,
+    )
+
+    ejercicio_asignado = SimpleNamespace(
+        id_asignacion_ejercicio=70,
+        id_asignacion=50,
+        id_ejercicio=15,
+        activo=True,
+    )
+
+    ejercicio = SimpleNamespace(
+        id_ejercicio=15,
+        tipo="CARDIO",
+    )
+
+    controlador.asignacion_dao.buscar_activa.return_value = (
+        asignacion
+    )
+
+    controlador.asignacion_ejercicio_dao.buscar_por_id.return_value = (
+        ejercicio_asignado
+    )
+
+    controlador.ejercicio_dao.buscar_por_id.return_value = (
+        ejercicio
+    )
+
+    mock_sesion_dao.guardar.side_effect = (
+        lambda sesion: sesion
+    )
+
+    (
+        controlador.asignacion_ejercicio_dao
+        .asignacion_esta_completada
+        .return_value
+    ) = True
+
+    controlador.asignacion_dao.finalizar_asignacion.return_value = (
+        True
+    )
+
+    with patch.object(
+        controlador,
+        "_registrar_log",
+    ) as mock_log:
+        resultado = controlador.registrar_sesion(
+            cliente=10,
+            rutina=5,
+            nombre_ejercicio="Caminata",
+            duracion_real=30,
+            intensidad_real="MEDIA",
+            veces_planificadas=2,
+            veces_realizadas=2,
+            id_asignacion_ejercicio=70,
+        )
+
+    assert resultado.id_cliente == 10
+    assert resultado.id_rutina == 5
+    assert resultado.id_asignacion == 50
+    assert resultado.id_asignacion_ejercicio == 70
+
+    controlador.asignacion_dao.buscar_activa.assert_called_once_with(
+        10
+    )
+
+    (
+        controlador.asignacion_ejercicio_dao
+        .buscar_por_id
+        .assert_called_once_with(70)
+    )
+
+    controlador.ejercicio_dao.buscar_por_id.assert_called_once_with(
+        15
+    )
+
+    (
+        controlador.asignacion_ejercicio_dao
+        .asignacion_esta_completada
+        .assert_called_once_with(50)
+    )
+
+    controlador.asignacion_dao.finalizar_asignacion.assert_called_once_with(
+        50
+    )
+
+    assert mock_log.call_count == 2
+
+    argumentos_finalizacion = mock_log.call_args_list[0].args
+
+    assert argumentos_finalizacion[0] == "CLIENTE_10"
+    assert (
+        "FINALIZACION_AUTOMATICA_RUTINA"
+        in argumentos_finalizacion[1]
+    )
+
+    argumentos_sesion = mock_log.call_args_list[1].args
+
+    assert argumentos_sesion[0] == "CLIENTE_10"
+    assert argumentos_sesion[1] == "REGISTRO_SESION"
+    assert "Asignacion: 50" in argumentos_sesion[2]
+    assert "EjercicioAsignado: 70" in argumentos_sesion[2]
+    assert "RutinaFinalizada: True" in argumentos_sesion[2]
+
+
+def test_registrar_sesion_vinculada_no_finaliza_si_meta_no_completada(
+    controlador,
+    mock_sesion_dao,
+):
+    """
+    Cubre el flujo de sesión vinculada cuando la asignación
+    todavía no está completada.
+    """
+    controlador.cliente_dao.buscar_por_id.return_value = (
+        SimpleNamespace(
+            id_usuario=10,
+            peso=Decimal("70.0"),
+        )
+    )
+
+    controlador.asignacion_dao.buscar_activa.return_value = (
+        SimpleNamespace(
+            id_asignacion=50,
+            id_rutina=5,
+        )
+    )
+
+    (
+        controlador.asignacion_ejercicio_dao
+        .buscar_por_id
+        .return_value
+    ) = SimpleNamespace(
+        id_asignacion_ejercicio=70,
+        id_asignacion=50,
+        id_ejercicio=15,
+        activo=True,
+    )
+
+    controlador.ejercicio_dao.buscar_por_id.return_value = (
+        SimpleNamespace(
+            id_ejercicio=15,
+            tipo="CARDIO",
+        )
+    )
+
+    mock_sesion_dao.guardar.side_effect = (
+        lambda sesion: sesion
+    )
+
+    (
+        controlador.asignacion_ejercicio_dao
+        .asignacion_esta_completada
+        .return_value
+    ) = False
+
+    with patch.object(
+        controlador,
+        "_registrar_log",
+    ) as mock_log:
+        controlador.registrar_sesion(
+            cliente=10,
+            rutina=5,
+            nombre_ejercicio="Bicicleta",
+            duracion_real=20,
+            intensidad_real="BAJA",
+            veces_planificadas=3,
+            veces_realizadas=1,
+            id_asignacion_ejercicio=70,
+        )
+
+    controlador.asignacion_dao.finalizar_asignacion.assert_not_called()
+
+    assert mock_log.call_count == 1
+
+    mensaje = mock_log.call_args.args[2]
+
+    assert "Asignacion: 50" in mensaje
+    assert "EjercicioAsignado: 70" in mensaje
+    assert "RutinaFinalizada: True" not in mensaje
+
+
+def test_registrar_sesion_vinculada_rechaza_cliente_sin_rutina_activa(
+    controlador,
+):
+    controlador.asignacion_dao.buscar_activa.return_value = None
+
+    with pytest.raises(
+        ValueError,
+        match="El cliente no tiene una rutina activa.",
+    ):
+        controlador.registrar_sesion(
+            cliente=10,
+            rutina=5,
+            nombre_ejercicio="Caminata",
+            duracion_real=30,
+            intensidad_real="MEDIA",
+            id_asignacion_ejercicio=70,
+        )
+
+
+def test_registrar_sesion_vinculada_rechaza_rutina_diferente(
+    controlador,
+):
+    controlador.asignacion_dao.buscar_activa.return_value = (
+        SimpleNamespace(
+            id_asignacion=50,
+            id_rutina=99,
+        )
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            "La rutina indicada no coincide con la "
+            "rutina activa del cliente."
+        ),
+    ):
+        controlador.registrar_sesion(
+            cliente=10,
+            rutina=5,
+            nombre_ejercicio="Caminata",
+            duracion_real=30,
+            intensidad_real="MEDIA",
+            id_asignacion_ejercicio=70,
+        )
+
+
+def test_registrar_sesion_vinculada_rechaza_ejercicio_inactivo(
+    controlador,
+):
+    controlador.asignacion_dao.buscar_activa.return_value = (
+        SimpleNamespace(
+            id_asignacion=50,
+            id_rutina=5,
+        )
+    )
+
+    (
+        controlador.asignacion_ejercicio_dao
+        .buscar_por_id
+        .return_value
+    ) = SimpleNamespace(
+        id_asignacion=50,
+        id_ejercicio=15,
+        activo=False,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="El ejercicio asignado está inactivo.",
+    ):
+        controlador.registrar_sesion(
+            cliente=10,
+            rutina=5,
+            nombre_ejercicio="Caminata",
+            duracion_real=30,
+            intensidad_real="MEDIA",
+            id_asignacion_ejercicio=70,
+        )
+
+
+def test_porcentaje_cumplimiento_sesion_con_valor_numerico(
+    controlador,
+    sesion_valida,
+):
+    resultado = controlador.porcentaje_cumplimiento_sesion(
+        sesion_valida
+    )
+
+    assert resultado == 50.0
+
+
+def test_porcentaje_cumplimiento_sesion_con_propiedad_callable(
+    controlador,
+    sesion_valida,
+):
+    with patch.object(
+        SesionEntrenamiento,
+        "porcentaje_cumplimiento",
+        new_callable=PropertyMock,
+        return_value=lambda: 75,
+    ):
+        resultado = controlador.porcentaje_cumplimiento_sesion(
+            sesion_valida
+        )
+
+    assert resultado == 75.0
+
+
+def test_porcentaje_cumplimiento_rechaza_objeto_invalido(
+    controlador,
+):
+    with pytest.raises(
+        TypeError,
+        match="La sesión no es válida.",
+    ):
+        controlador.porcentaje_cumplimiento_sesion(
+            SimpleNamespace(
+                porcentaje_cumplimiento=100,
+            )
+        )
+
+def test_registrar_sesion_vinculada_rechaza_ejercicio_asignado_inexistente(
+    controlador,
+):
+    controlador.asignacion_dao.buscar_activa.return_value = (
+        SimpleNamespace(
+            id_asignacion=50,
+            id_rutina=5,
+        )
+    )
+
+    (
+        controlador.asignacion_ejercicio_dao
+        .buscar_por_id
+        .return_value
+    ) = None
+
+    with pytest.raises(
+        ValueError,
+        match="El ejercicio asignado no existe.",
+    ):
+        controlador.registrar_sesion(
+            cliente=10,
+            rutina=5,
+            nombre_ejercicio="Caminata",
+            duracion_real=30,
+            intensidad_real="MEDIA",
+            id_asignacion_ejercicio=70,
+        )
+
+
+def test_registrar_sesion_vinculada_rechaza_ejercicio_de_otra_asignacion(
+    controlador,
+):
+    controlador.asignacion_dao.buscar_activa.return_value = (
+        SimpleNamespace(
+            id_asignacion=50,
+            id_rutina=5,
+        )
+    )
+
+    (
+        controlador.asignacion_ejercicio_dao
+        .buscar_por_id
+        .return_value
+    ) = SimpleNamespace(
+        id_asignacion_ejercicio=70,
+        id_asignacion=999,
+        id_ejercicio=15,
+        activo=True,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            "El ejercicio no pertenece a la rutina "
+            "activa del cliente."
+        ),
+    ):
+        controlador.registrar_sesion(
+            cliente=10,
+            rutina=5,
+            nombre_ejercicio="Caminata",
+            duracion_real=30,
+            intensidad_real="MEDIA",
+            id_asignacion_ejercicio=70,
+        )
+
+
+def test_registrar_sesion_vinculada_rechaza_ejercicio_global_inexistente(
+    controlador,
+):
+    controlador.asignacion_dao.buscar_activa.return_value = (
+        SimpleNamespace(
+            id_asignacion=50,
+            id_rutina=5,
+        )
+    )
+
+    (
+        controlador.asignacion_ejercicio_dao
+        .buscar_por_id
+        .return_value
+    ) = SimpleNamespace(
+        id_asignacion_ejercicio=70,
+        id_asignacion=50,
+        id_ejercicio=15,
+        activo=True,
+    )
+
+    controlador.ejercicio_dao.buscar_por_id.return_value = None
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            "No se encontró el ejercicio asociado "
+            "a la rutina activa."
+        ),
+    ):
+        controlador.registrar_sesion(
+            cliente=10,
+            rutina=5,
+            nombre_ejercicio="Caminata",
+            duracion_real=30,
+            intensidad_real="MEDIA",
+            id_asignacion_ejercicio=70,
+        )
+
+
+def test_registrar_sesion_vinculada_rechaza_tipo_ejercicio_invalido(
+    controlador,
+):
+    controlador.asignacion_dao.buscar_activa.return_value = (
+        SimpleNamespace(
+            id_asignacion=50,
+            id_rutina=5,
+        )
+    )
+
+    (
+        controlador.asignacion_ejercicio_dao
+        .buscar_por_id
+        .return_value
+    ) = SimpleNamespace(
+        id_asignacion_ejercicio=70,
+        id_asignacion=50,
+        id_ejercicio=15,
+        activo=True,
+    )
+
+    controlador.ejercicio_dao.buscar_por_id.return_value = (
+        SimpleNamespace(
+            id_ejercicio=15,
+            tipo="",
+        )
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            "El ejercicio no tiene un tipo válido "
+            "para calcular las calorías."
+        ),
+    ):
+        controlador.registrar_sesion(
+            cliente=10,
+            rutina=5,
+            nombre_ejercicio="Caminata",
+            duracion_real=30,
+            intensidad_real="MEDIA",
+            id_asignacion_ejercicio=70,
+        )

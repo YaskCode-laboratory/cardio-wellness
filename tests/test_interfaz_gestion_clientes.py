@@ -1407,3 +1407,242 @@ class TestInterfazGestionClientes:
         interfaz._limpiar_formulario()
 
         assert interfaz._ent_nombre.valor == ""
+
+    def test_restablecer_clave_cliente_sin_seleccion(
+        self,
+        interfaz,
+    ):
+        interfaz._tree = TreeviewFalso()
+
+        with patch.object(
+            interfaz,
+            "mostrar_error",
+        ) as mock_error:
+            interfaz.restablecerClaveCliente()
+
+        mock_error.assert_called_once_with(
+            "Seleccione un cliente para cambiar "
+            "su contraseña."
+        )
+
+    @pytest.mark.parametrize(
+        "valores",
+        [
+            (),
+            ("no-es-numero",),
+            (None,),
+        ],
+    )
+    def test_restablecer_clave_cliente_valida_id(
+        self,
+        interfaz,
+        valores,
+    ):
+        self.preparar_tree(
+            interfaz,
+            valores=valores,
+        )
+
+        with patch.object(
+            interfaz,
+            "mostrar_error",
+        ) as mock_error:
+            interfaz.restablecerClaveCliente()
+
+        mock_error.assert_called_once_with(
+            "El ID del cliente no es válido."
+        )
+
+    def test_restablecer_clave_cliente_cancelada_en_primera_clave(
+        self,
+        interfaz,
+        control_clientes,
+    ):
+        self.preparar_tree(interfaz)
+
+        with patch(
+            "src.interfaz.interfaz_gestion_clientes."
+            "simpledialog.askstring",
+            return_value=None,
+        ) as mock_askstring:
+            interfaz.restablecerClaveCliente()
+
+        mock_askstring.assert_called_once()
+        control_clientes.restablecer_contrasenia_cliente.assert_not_called()
+
+    def test_restablecer_clave_cliente_cancelada_en_confirmacion(
+        self,
+        interfaz,
+        control_clientes,
+    ):
+        self.preparar_tree(interfaz)
+
+        with patch(
+            "src.interfaz.interfaz_gestion_clientes."
+            "simpledialog.askstring",
+            side_effect=[
+                "ClaveNueva1",
+                None,
+            ],
+        ) as mock_askstring:
+            interfaz.restablecerClaveCliente()
+
+        assert mock_askstring.call_count == 2
+        control_clientes.restablecer_contrasenia_cliente.assert_not_called()
+
+    def test_restablecer_clave_cliente_rechaza_claves_distintas(
+        self,
+        interfaz,
+        control_clientes,
+    ):
+        self.preparar_tree(interfaz)
+
+        with patch(
+            "src.interfaz.interfaz_gestion_clientes."
+            "simpledialog.askstring",
+            side_effect=[
+                "ClaveNueva1",
+                "ClaveDistinta2",
+            ],
+        ), patch.object(
+            interfaz,
+            "mostrar_error",
+        ) as mock_error:
+            interfaz.restablecerClaveCliente()
+
+        mock_error.assert_called_once_with(
+            "Las contraseñas no coinciden."
+        )
+
+        control_clientes.restablecer_contrasenia_cliente.assert_not_called()
+
+    def test_restablecer_clave_cliente_cancelada_por_confirmacion(
+        self,
+        interfaz,
+        control_clientes,
+    ):
+        self.preparar_tree(interfaz)
+
+        with patch(
+            "src.interfaz.interfaz_gestion_clientes."
+            "simpledialog.askstring",
+            side_effect=[
+                "ClaveNueva1",
+                "ClaveNueva1",
+            ],
+        ), patch.object(
+            interfaz,
+            "confirmar_accion",
+            return_value=False,
+        ) as mock_confirmar:
+            interfaz.restablecerClaveCliente()
+
+        mock_confirmar.assert_called_once_with(
+            "¿Desea restablecer la contraseña del "
+            "cliente con ID 1?"
+        )
+
+        control_clientes.restablecer_contrasenia_cliente.assert_not_called()
+
+    def test_restablecer_clave_cliente_correctamente(
+        self,
+        interfaz,
+        control_clientes,
+    ):
+        self.preparar_tree(interfaz)
+
+        with patch(
+            "src.interfaz.interfaz_gestion_clientes."
+            "simpledialog.askstring",
+            side_effect=[
+                "ClaveNueva1",
+                "ClaveNueva1",
+            ],
+        ), patch.object(
+            interfaz,
+            "confirmar_accion",
+            return_value=True,
+        ), patch.object(
+            interfaz,
+            "mostrar_mensaje",
+        ) as mock_mensaje:
+            interfaz.restablecerClaveCliente()
+
+        (
+            control_clientes
+            .restablecer_contrasenia_cliente
+            .assert_called_once_with(
+                1,
+                "ClaveNueva1",
+            )
+        )
+
+        mock_mensaje.assert_called_once_with(
+            "La contraseña del cliente fue "
+            "actualizada correctamente."
+        )
+
+    def test_restablecer_clave_cliente_muestra_value_error(
+        self,
+        interfaz,
+        control_clientes,
+    ):
+        self.preparar_tree(interfaz)
+
+        control_clientes.restablecer_contrasenia_cliente.side_effect = (
+            ValueError("La clave no cumple los requisitos")
+        )
+
+        with patch(
+            "src.interfaz.interfaz_gestion_clientes."
+            "simpledialog.askstring",
+            side_effect=[
+                "ClaveNueva1",
+                "ClaveNueva1",
+            ],
+        ), patch.object(
+            interfaz,
+            "confirmar_accion",
+            return_value=True,
+        ), patch.object(
+            interfaz,
+            "mostrar_error",
+        ) as mock_error:
+            interfaz.restablecerClaveCliente()
+
+        mock_error.assert_called_once_with(
+            "La clave no cumple los requisitos"
+        )
+
+    def test_restablecer_clave_cliente_muestra_error_inesperado(
+        self,
+        interfaz,
+        control_clientes,
+    ):
+        self.preparar_tree(interfaz)
+
+        control_clientes.restablecer_contrasenia_cliente.side_effect = (
+            RuntimeError("Fallo de persistencia")
+        )
+
+        with patch(
+            "src.interfaz.interfaz_gestion_clientes."
+            "simpledialog.askstring",
+            side_effect=[
+                "ClaveNueva1",
+                "ClaveNueva1",
+            ],
+        ), patch.object(
+            interfaz,
+            "confirmar_accion",
+            return_value=True,
+        ), patch.object(
+            interfaz,
+            "mostrar_error",
+        ) as mock_error:
+            interfaz.restablecerClaveCliente()
+
+        mock_error.assert_called_once_with(
+            "No se pudo restablecer la contraseña: "
+            "Fallo de persistencia"
+        )

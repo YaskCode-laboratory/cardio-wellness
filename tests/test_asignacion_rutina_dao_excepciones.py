@@ -1,882 +1,175 @@
-"""Pruebas unitarias para InterfazAdministrador."""
+"""Pruebas de excepciones para AsignacionRutinaDAO."""
 
-from types import SimpleNamespace
+
+from datetime import date
 from unittest.mock import MagicMock, patch
 
-import tkinter as tk
 
 import pytest
 
-from src.interfaz.interfaz_administrador import (
-    InterfazAdministrador,
+
+import src.persistencia.asignacion_rutina_dao as modulo_dao
+
+
+from src.modelos.enums import EstadoAsignacion
+from src.persistencia.asignacion_rutina_dao import (
+    AsignacionRutinaDAO,
 )
 
 
 @pytest.fixture
-def administrador():
-    """Crea un administrador simulado."""
-    admin = MagicMock()
-    admin.nombre = "Juan"
-    admin.correo_electronico = "juan@admin.com"
-    admin.obtener_nombre_completo.return_value = "Juan Perez"
-    return admin
+def bd_mock():
+    """
+    Simula ConexionBD y su conexión PostgreSQL.
+    """
+    bd = MagicMock()
+
+    conexion = MagicMock()
+    conexion.closed = False
+
+    bd._conexion = conexion
+
+    return bd
 
 
 @pytest.fixture
-def controles():
-    """Crea controladores simulados."""
-    return {
-        "clientes": MagicMock(),
-        "rutinas": MagicMock(),
-        "ejercicios": MagicMock(),
-        "sesiones": MagicMock(),
-    }
-
-
-def crear_ventana_sin_tk(
-    administrador,
-    controles,
+def dao(
+    bd_mock,
 ):
     """
-    Crea una instancia de InterfazAdministrador sin ejecutar
-    Tkinter.
-
-    Esto evita abrir una ventana real y evita problemas de
-    inicialización del intérprete Tcl/Tk durante las pruebas.
+    Crea un DAO con una conexión simulada.
     """
-    ventana = object.__new__(InterfazAdministrador)
-
-    ventana._administrador_actual = administrador
-    ventana._control_clientes = controles["clientes"]
-    ventana._control_rutinas = controles["rutinas"]
-    ventana._control_ejercicios = controles["ejercicios"]
-    ventana._control_sesiones = controles["sesiones"]
-
-    ventana.title = MagicMock()
-    ventana.geometry = MagicMock()
-    ventana.resizable = MagicMock()
-    ventana.destroy = MagicMock()
-
-    return ventana
-
-
-@pytest.fixture
-def ventana(
-    administrador,
-    controles,
-):
-    """Crea una ventana simulada sin iniciar Tkinter."""
-    return crear_ventana_sin_tk(
-        administrador,
-        controles,
-    )
-
-
-def test_inicializa_atributos_principales(
-    ventana,
-    administrador,
-    controles,
-):
-    """Verifica que guarda administrador y controladores."""
-    assert ventana.administrador_actual is administrador
-    assert ventana.control_clientes is controles["clientes"]
-    assert ventana.control_rutinas is controles["rutinas"]
-    assert ventana.control_ejercicios is controles["ejercicios"]
-
-    assert ventana._control_sesiones is controles["sesiones"]
-
-
-def test_inicializa_la_ventana(
-    ventana,
-    administrador,
-):
-    """Verifica título, tamaño y configuración de ventana."""
-    ventana.title(
-        f"Cardio Wellness - Administrador: "
-        f"{administrador.nombre}"
-    )
-
-    ventana.geometry("900x600")
-    ventana.resizable(True, True)
-
-    ventana.title.assert_called_once_with(
-        "Cardio Wellness - Administrador: Juan"
-    )
-
-    ventana.geometry.assert_called_once_with("900x600")
-
-    ventana.resizable.assert_called_once_with(
-        True,
-        True,
-    )
-
-
-def test_propiedades_devuelven_atributos_correctos(
-    ventana,
-    administrador,
-    controles,
-):
-    """Verifica las propiedades públicas existentes."""
-    assert ventana.administrador_actual is administrador
-    assert ventana.control_clientes is controles["clientes"]
-    assert ventana.control_rutinas is controles["rutinas"]
-    assert ventana.control_ejercicios is controles["ejercicios"]
-
-
-def test_mostrar_menu_principal_crea_notebook_y_pestanas(
-    administrador,
-    controles,
-):
-    """Verifica que se construye el menú principal."""
-    ventana = crear_ventana_sin_tk(
-        administrador,
-        controles,
-    )
-
-    notebook_mock = MagicMock()
-
-    with patch(
-        "src.interfaz.interfaz_administrador.ttk.Frame",
-    ) as frame_mock, patch(
-        "src.interfaz.interfaz_administrador.ttk.Label",
-    ) as label_mock, patch(
-        "src.interfaz.interfaz_administrador.ttk.Button",
-    ) as button_mock, patch(
-        "src.interfaz.interfaz_administrador.ttk.Notebook",
-        return_value=notebook_mock,
-    ) as notebook_class_mock, patch.object(
-        InterfazAdministrador,
-        "abrirGestionClientes",
-    ) as clientes_mock, patch.object(
-        InterfazAdministrador,
-        "abrirGestionRutinas",
-    ) as rutinas_mock, patch.object(
-        InterfazAdministrador,
-        "abrirRutinasAsignadas",
-    ) as rutinas_asignadas_mock, patch.object(
-        InterfazAdministrador,
-        "abrirGestionEjercicios",
-    ) as ejercicios_mock, patch.object(
-        InterfazAdministrador,
-        "abrirProgresoClientes",
-    ) as progreso_mock:
-        ventana.mostrarMenuPrincipal()
-
-    frame_mock.assert_called_once_with(
-        ventana,
-        padding=10,
-    )
-
-    frame_mock.return_value.pack.assert_called_once_with(
-        fill="x",
-    )
-
-    label_mock.assert_called_once_with(
-        frame_mock.return_value,
-        text="Bienvenido, Juan Perez",
-        font=("Helvetica", 12, "bold"),
-    )
-
-    label_mock.return_value.pack.assert_called_once_with(
-        side="left",
-    )
-
-    button_mock.assert_called_once_with(
-        frame_mock.return_value,
-        text="Cerrar Sesion",
-        command=ventana.cerrarSesion,
-    )
-
-    button_mock.return_value.pack.assert_called_once_with(
-        side="right",
-    )
-
-    notebook_class_mock.assert_called_once_with(
-        ventana
-    )
-
-    notebook_mock.pack.assert_called_once_with(
-        fill="both",
-        expand=True,
-        padx=10,
-        pady=10,
-    )
-
-    assert ventana._notebook is notebook_mock
-
-    clientes_mock.assert_called_once_with()
-    rutinas_mock.assert_called_once_with()
-    rutinas_asignadas_mock.assert_called_once_with()
-    ejercicios_mock.assert_called_once_with()
-    progreso_mock.assert_called_once_with()
-
-
-def test_abrir_gestion_clientes(
-    ventana,
-    controles,
-):
-    """Verifica la pestaña de gestión de clientes."""
-    notebook_mock = MagicMock()
-    pestana_mock = MagicMock()
-
-    ventana._notebook = notebook_mock
-
-    with patch(
-        "src.interfaz.interfaz_administrador."
-        "InterfazGestionClientes",
-        return_value=pestana_mock,
-    ) as interfaz_mock:
-        ventana.abrirGestionClientes()
-
-    interfaz_mock.assert_called_once_with(
-        notebook_mock,
-        controles["clientes"],
-    )
-
-    notebook_mock.add.assert_called_once_with(
-        pestana_mock,
-        text="Clientes",
-    )
-
-
-def test_abrir_gestion_rutinas(
-    ventana,
-    controles,
-):
-    """Verifica la pestaña de gestión de rutinas."""
-    notebook_mock = MagicMock()
-    pestana_mock = MagicMock()
-
-    ventana._notebook = notebook_mock
-
-    with patch(
-        "src.interfaz.interfaz_administrador."
-        "InterfazGestionRutinas",
-        return_value=pestana_mock,
-    ) as interfaz_mock:
-        ventana.abrirGestionRutinas()
-
-    interfaz_mock.assert_called_once_with(
-        notebook_mock,
-        controles["rutinas"],
-    )
-
-    notebook_mock.add.assert_called_once_with(
-        pestana_mock,
-        text="Rutinas",
-    )
-
-
-def test_abrir_rutinas_asignadas(
-    ventana,
-    controles,
-):
-    """
-    Verifica que se cree la pestaña de rutinas asignadas
-    en modo de pruebas.
-    """
-    notebook_mock = MagicMock()
-    pestana_mock = MagicMock()
-
-    ventana._notebook = notebook_mock
-
-    with patch(
-        "src.interfaz.interfaz_administrador."
-        "InterfazRutinasAsignadas",
-        return_value=pestana_mock,
-    ) as interfaz_mock:
-        ventana.abrirRutinasAsignadas()
-
-    interfaz_mock.assert_called_once_with(
-        notebook_mock,
-        controles["rutinas"],
-    )
-
-    notebook_mock.add.assert_called_once_with(
-        pestana_mock,
-        text="Rutinas asignadas",
-    )
-
-
-def test_abrir_rutinas_asignadas_modo_real(
-    ventana,
-    controles,
-):
-    """
-    Verifica que RutinasAsignadas reciba todas las
-    dependencias cuando se ejecuta en modo real.
-    """
-    notebook_mock = MagicMock()
-    pestana_mock = MagicMock()
-    autenticacion = MagicMock()
-
-    ventana._notebook = notebook_mock
-    ventana._control_autenticacion = autenticacion
-
-    ventana._controladores = {
-        "control_auth": autenticacion,
-        "control_clientes": controles["clientes"],
-        "control_rutinas": controles["rutinas"],
-        "control_ejercicios": controles["ejercicios"],
-        "control_sesiones": controles["sesiones"],
-    }
-
-    with patch(
-        "src.interfaz.interfaz_administrador."
-        "InterfazRutinasAsignadas",
-        return_value=pestana_mock,
-    ) as interfaz_mock:
-        ventana.abrirRutinasAsignadas()
-
-    interfaz_mock.assert_called_once_with(
-        master=notebook_mock,
-        control_rutinas=controles["rutinas"],
-        control_sesiones=controles["sesiones"],
-        control_autenticacion=autenticacion,
-        control_ejercicios=controles["ejercicios"],
-    )
-
-    notebook_mock.add.assert_called_once_with(
-        pestana_mock,
-        text="Rutinas asignadas",
-    )
-
-
-def test_abrir_gestion_ejercicios(
-    ventana,
-    controles,
-):
-    """Verifica la pestaña de gestión de ejercicios."""
-    notebook_mock = MagicMock()
-    pestana_mock = MagicMock()
-
-    ventana._notebook = notebook_mock
-
-    with patch(
-        "src.interfaz.interfaz_administrador."
-        "InterfazGestionEjercicios",
-        return_value=pestana_mock,
-    ) as interfaz_mock:
-        ventana.abrirGestionEjercicios()
-
-    interfaz_mock.assert_called_once_with(
-        notebook_mock,
-        controles["ejercicios"],
-    )
-
-    notebook_mock.add.assert_called_once_with(
-        pestana_mock,
-        text="Ejercicios",
-    )
-
-
-def test_cerrar_sesion_registra_logout_y_destruye_ventana(
-    ventana,
-    administrador,
-    controles,
-):
-    """Verifica que cerrar sesión destruye y vuelve a la pantalla de login."""
-    login_mock = MagicMock()
-    autenticacion_mock = MagicMock()
-
-    with patch(
-        "src.interfaz.interfaz_login.InterfazLogin",
-        login_mock,
-    ), patch(
-        "src.controladores.control_autenticacion.ControlAutenticacion",
-        autenticacion_mock,
-    ):
-        ventana.cerrarSesion()
-
-    ventana.destroy.assert_called_once_with()
-
-    login_mock.assert_called_once_with(
-        autenticacion_mock.return_value,
-    )
-
-    login_mock.return_value.mainloop.assert_called_once_with()
-
-
-def test_cerrar_sesion_no_falla_si_error_de_log(
-    ventana,
-    controles,
-):
-    """Verifica que cerrar sesión sigue funcionando con un mock de log."""
-    controles["clientes"]._registrar_log.side_effect = RuntimeError(
-        "Error de prueba"
-    )
-
-    login_mock = MagicMock()
-    autenticacion_mock = MagicMock()
-
-    with patch(
-        "src.interfaz.interfaz_login.InterfazLogin",
-        login_mock,
-    ), patch(
-        "src.controladores.control_autenticacion.ControlAutenticacion",
-        autenticacion_mock,
-    ):
-        ventana.cerrarSesion()
-
-    ventana.destroy.assert_called_once_with()
-
-    login_mock.assert_called_once_with(
-        autenticacion_mock.return_value,
-    )
-
-    login_mock.return_value.mainloop.assert_called_once_with()
-
-def test_controladores_se_crean_automaticamente(
-    administrador,
-):
-    """Verifica la creación automática de controladores."""
-    clientes = MagicMock()
-    rutinas = MagicMock()
-    ejercicios = MagicMock()
-
-    ventana = object.__new__(InterfazAdministrador)
-
-    ventana._administrador_actual = administrador
-
-    with patch(
-        "src.interfaz.interfaz_administrador."
-        "ControlClientes",
-        return_value=clientes,
-    ) as clientes_mock, patch(
-        "src.interfaz.interfaz_administrador."
-        "ControlRutinas",
-        return_value=rutinas,
-    ) as rutinas_mock, patch(
-        "src.interfaz.interfaz_administrador."
-        "ControlEjercicios",
-        return_value=ejercicios,
-    ) as ejercicios_mock:
-        ventana._control_clientes = clientes_mock()
-        ventana._control_rutinas = rutinas_mock()
-        ventana._control_ejercicios = ejercicios_mock()
-
-    clientes_mock.assert_called_once_with()
-    rutinas_mock.assert_called_once_with()
-    ejercicios_mock.assert_called_once_with()
-
-    assert ventana.control_clientes is clientes
-    assert ventana.control_rutinas is rutinas
-    assert ventana.control_ejercicios is ejercicios
-
-
-def crear_administrador_real():
-    """
-    Crea un administrador simple para pruebas puntuales.
-    """
-    return SimpleNamespace(
-        nombre="Ana",
-        correo_electronico="ana@admin.com",
-        obtener_nombre_completo=lambda: "Ana López",
-    )
-
-
-def test_constructor_configura_ventana_con_controladores_explicitos(
-    administrador,
-    controles,
-):
-    """
-    Verifica constructor real sin iniciar una ventana Tk.
-    """
-    control_autenticacion = MagicMock()
-
     with patch.object(
-        tk.Tk,
-        "__init__",
-        return_value=None,
-    ) as mock_tk_init, patch.object(
-        InterfazAdministrador,
-        "title",
-    ) as mock_title, patch.object(
-        InterfazAdministrador,
-        "geometry",
-    ) as mock_geometry, patch.object(
-        InterfazAdministrador,
-        "resizable",
-    ) as mock_resizable, patch.object(
-        InterfazAdministrador,
-        "mostrarMenuPrincipal",
-    ) as mock_menu:
-        ventana = InterfazAdministrador(
-            administrador_actual=administrador,
-            control_clientes=controles["clientes"],
-            control_rutinas=controles["rutinas"],
-            control_ejercicios=controles["ejercicios"],
-            control_autenticacion=control_autenticacion,
-        )
-
-    mock_tk_init.assert_called_once_with()
-
-    mock_title.assert_called_once_with(
-        "Cardio Wellness - Administrador: Juan Perez"
-    )
-
-    mock_geometry.assert_called_once_with("900x600")
-
-    mock_resizable.assert_called_once_with(
-        True,
-        True,
-    )
-
-    mock_menu.assert_called_once_with()
-
-    assert ventana.administrador_actual is administrador
-    assert ventana.control_clientes is controles["clientes"]
-    assert ventana.control_rutinas is controles["rutinas"]
-    assert ventana.control_ejercicios is controles["ejercicios"]
-
-    assert (
-        ventana.control_autenticacion
-        is control_autenticacion
-    )
-
-    assert ventana.controladores == {
-        "control_auth": control_autenticacion,
-        "control_autenticacion": control_autenticacion,
-        "control_clientes": controles["clientes"],
-        "control_rutinas": controles["rutinas"],
-        "control_ejercicios": controles["ejercicios"],
-        "control_sesiones": None,
-    }
+        modulo_dao.ConexionBD,
+        "obtener_instancia",
+        return_value=bd_mock,
+    ):
+        return AsignacionRutinaDAO()
 
 
-def test_constructor_usa_diccionario_controladores(
-    administrador,
+def crear_cursor(
+    rowcount=1,
 ):
     """
-    Verifica que el constructor obtenga dependencias desde
-    el diccionario de controladores.
+    Crea un cursor compatible con el bloque with.
     """
-    clientes = MagicMock()
-    rutinas = MagicMock()
-    ejercicios = MagicMock()
-    sesiones = MagicMock()
-    autenticacion = MagicMock()
+    cursor = MagicMock()
 
-    controladores = {
-        "control_clientes": clientes,
-        "control_rutinas": rutinas,
-        "control_ejercicios": ejercicios,
-        "control_sesiones": sesiones,
-        "control_auth": autenticacion,
-        "configuracion_extra": "valor",
-    }
+    cursor.rowcount = rowcount
+    cursor.__enter__.return_value = cursor
+    cursor.__exit__.return_value = False
 
-    with patch.object(
-        tk.Tk,
-        "__init__",
-        return_value=None,
-    ), patch.object(
-        InterfazAdministrador,
-        "title",
-    ), patch.object(
-        InterfazAdministrador,
-        "geometry",
-    ), patch.object(
-        InterfazAdministrador,
-        "resizable",
-    ), patch.object(
-        InterfazAdministrador,
-        "mostrarMenuPrincipal",
-    ):
-        ventana = InterfazAdministrador(
-            administrador_actual=administrador,
-            controladores=controladores,
-        )
+    return cursor
 
-    assert ventana.control_clientes is clientes
-    assert ventana.control_rutinas is rutinas
-    assert ventana.control_ejercicios is ejercicios
 
-    assert ventana._control_sesiones is sesiones
-
-    assert ventana.control_autenticacion is autenticacion
-
-    assert ventana.controladores["control_auth"] is autenticacion
-
-    assert (
-        ventana.controladores["control_autenticacion"]
-        is autenticacion
-    )
-
-    assert ventana.controladores["control_sesiones"] is sesiones
-
-    assert (
-        ventana.controladores["configuracion_extra"]
-        == "valor"
-    )
+def configurar_cursor(
+    dao,
+    cursor,
+):
+    """
+    Configura el cursor simulado de la conexión del DAO.
+    """
+    dao._bd._conexion.cursor.return_value = cursor
 
 
 @pytest.mark.parametrize(
-    ("argumentos", "mensaje"),
+    "id_asignacion",
     [
-        (
-            {
-                "administrador_actual": None,
-                "control_clientes": MagicMock(),
-                "control_rutinas": MagicMock(),
-                "control_ejercicios": MagicMock(),
-                "control_autenticacion": MagicMock(),
-            },
-            "Debe existir un administrador autenticado.",
-        ),
-        (
-            {
-                "administrador_actual": MagicMock(),
-                "control_clientes": None,
-                "control_rutinas": MagicMock(),
-                "control_ejercicios": MagicMock(),
-                "control_autenticacion": MagicMock(),
-            },
-            (
-                "InterfazAdministrador requiere un "
-                "ControlClientes inicializado."
-            ),
-        ),
-        (
-            {
-                "administrador_actual": MagicMock(),
-                "control_clientes": MagicMock(),
-                "control_rutinas": None,
-                "control_ejercicios": MagicMock(),
-                "control_autenticacion": MagicMock(),
-            },
-            (
-                "InterfazAdministrador requiere un "
-                "ControlRutinas inicializado."
-            ),
-        ),
-        (
-            {
-                "administrador_actual": MagicMock(),
-                "control_clientes": MagicMock(),
-                "control_rutinas": MagicMock(),
-                "control_ejercicios": None,
-                "control_autenticacion": MagicMock(),
-            },
-            (
-                "InterfazAdministrador requiere un "
-                "ControlEjercicios inicializado."
-            ),
-        ),
-        (
-            {
-                "administrador_actual": MagicMock(),
-                "control_clientes": MagicMock(),
-                "control_rutinas": MagicMock(),
-                "control_ejercicios": MagicMock(),
-                "control_autenticacion": None,
-            },
-            (
-                "InterfazAdministrador requiere un "
-                "ControlAutenticacion inicializado."
-            ),
-        ),
+        None,
+        True,
+        False,
+        0,
+        -1,
+        "10",
+        10.5,
     ],
 )
-def test_constructor_valida_dependencias_obligatorias(
-    argumentos,
-    mensaje,
+def test_cancelar_asignacion_rechaza_id_invalido(
+    dao,
+    id_asignacion,
 ):
     """
-    Verifica errores de validación del constructor.
+    Verifica que cancelar_asignacion rechace IDs que no
+    sean enteros positivos.
     """
-    with patch.object(
-        tk.Tk,
-        "__init__",
-        return_value=None,
+    with pytest.raises(ValueError):
+        dao.cancelar_asignacion(id_asignacion)
+
+    dao._bd.abrir_conexion.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("rowcount", "esperado"),
+    [
+        (1, True),
+        (0, False),
+    ],
+)
+def test_cancelar_asignacion_retorna_resultado_segun_rowcount(
+    dao,
+    rowcount,
+    esperado,
+):
+    """
+    Verifica el resultado según la cantidad de filas
+    actualizadas por la sentencia SQL.
+    """
+    cursor = crear_cursor(
+        rowcount=rowcount,
+    )
+
+    configurar_cursor(
+        dao,
+        cursor,
+    )
+
+    resultado = dao.cancelar_asignacion(22)
+
+    assert resultado is esperado
+
+    dao._bd.abrir_conexion.assert_called_once_with()
+
+    cursor.execute.assert_called_once()
+
+    consulta, parametros = cursor.execute.call_args.args
+
+    assert "UPDATE asignaciones_rutina" in consulta
+
+    assert parametros[0] == EstadoAsignacion.CANCELADA.value
+    assert parametros[1] == date.today()
+    assert parametros[2] == 22
+    assert parametros[3] == EstadoAsignacion.ACTIVA.value
+
+    dao._bd._conexion.commit.assert_called_once_with()
+
+    dao._bd._conexion.rollback.assert_not_called()
+
+
+def test_cancelar_asignacion_hace_rollback_en_error(
+    dao,
+):
+    """
+    Verifica rollback y relanzamiento si falla la consulta.
+    """
+    cursor = crear_cursor()
+
+    cursor.execute.side_effect = RuntimeError(
+        "fallo al cancelar asignación",
+    )
+
+    configurar_cursor(
+        dao,
+        cursor,
+    )
+
+    with pytest.raises(
+        RuntimeError,
+        match="fallo al cancelar",
     ):
-        with pytest.raises(ValueError) as error:
-            InterfazAdministrador(**argumentos)
+        dao.cancelar_asignacion(22)
 
-    assert str(error.value) == mensaje
+    dao._bd.abrir_conexion.assert_called_once_with()
 
+    dao._bd._conexion.rollback.assert_called_once_with()
 
-def test_obtener_nombre_administrador_usa_atributo_nombre(
-    controles,
-):
-    """
-    Verifica fallback a nombre cuando no existe un método
-    utilizable.
-    """
-    administrador_simple = SimpleNamespace(
-        nombre="Carlos"
-    )
-
-    ventana = crear_ventana_sin_tk(
-        administrador_simple,
-        controles,
-    )
-
-    assert (
-        ventana._obtener_nombre_administrador()
-        == "Carlos"
-    )
-
-
-def test_es_modo_pruebas_es_verdadero_sin_control_autenticacion(
-    ventana,
-):
-    """
-    Verifica detección de instancia parcial de pruebas.
-    """
-    assert ventana._es_modo_pruebas() is True
-
-
-def test_es_modo_pruebas_es_verdadero_sin_diccionario_controladores(
-    ventana,
-):
-    """
-    Verifica detección cuando falta controladores.
-    """
-    ventana._control_autenticacion = MagicMock()
-
-    assert ventana._es_modo_pruebas() is True
-
-
-def test_es_modo_pruebas_es_falso_con_atributos_reales(
-    ventana,
-):
-    """
-    Verifica detección de instancia real.
-    """
-    ventana._control_autenticacion = MagicMock()
-
-    ventana._controladores = {
-        "control_auth": ventana._control_autenticacion,
-    }
-
-    assert ventana._es_modo_pruebas() is False
-
-
-def test_abrir_gestion_rutinas_modo_real(
-    ventana,
-    controles,
-):
-    """
-    Verifica que Rutinas reciba dependencias en modo real.
-    """
-    notebook_mock = MagicMock()
-    autenticacion = MagicMock()
-    pestana_mock = MagicMock()
-
-    ventana._notebook = notebook_mock
-    ventana._control_autenticacion = autenticacion
-
-    ventana._controladores = {
-        "control_auth": autenticacion,
-    }
-
-    with patch(
-        "src.interfaz.interfaz_administrador."
-        "InterfazGestionRutinas",
-        return_value=pestana_mock,
-    ) as interfaz_mock:
-        ventana.abrirGestionRutinas()
-
-    interfaz_mock.assert_called_once_with(
-        master=notebook_mock,
-        control_rutinas=controles["rutinas"],
-        control_autenticacion=autenticacion,
-        control_ejercicios=controles["ejercicios"],
-    )
-
-    notebook_mock.add.assert_called_once_with(
-        pestana_mock,
-        text="Rutinas",
-    )
-
-
-def test_cerrar_sesion_modo_real_reutiliza_controladores(
-    ventana,
-    controles,
-):
-    """Verifica que el cierre real reutiliza controladores existentes."""
-    autenticacion = MagicMock()
-
-    ventana._control_autenticacion = autenticacion
-    ventana._controladores = {
-        "control_auth": autenticacion,
-        "control_clientes": controles["clientes"],
-    }
-
-    login_mock = MagicMock()
-
-    with patch(
-        "src.interfaz.interfaz_login.InterfazLogin",
-        login_mock,
-    ):
-        ventana.cerrarSesion()
-
-    ventana.destroy.assert_called_once_with()
-
-    login_mock.assert_called_once_with(
-        control_autenticacion=autenticacion,
-        controladores=ventana._controladores,
-    )
-
-    login_mock.return_value.mainloop.assert_called_once_with()
-def test_abrir_progreso_clientes(
-    ventana,
-    controles,
-):
-    """
-    Verifica creación de la pestaña Progreso de clientes.
-    """
-    notebook_mock = MagicMock()
-    control_progreso = MagicMock()
-    pestania_progreso = MagicMock()
-
-    ventana._notebook = notebook_mock
-
-    ventana._controladores = {
-        "control_auth": MagicMock(),
-        "control_clientes": controles["clientes"],
-        "control_rutinas": controles["rutinas"],
-        "control_ejercicios": controles["ejercicios"],
-        "control_sesiones": controles["sesiones"],
-        "control_progreso": control_progreso,
-    }
-
-    with patch(
-        "src.interfaz.interfaz_administrador."
-        "InterfazProgresoClientesAdmin",
-        return_value=pestania_progreso,
-    ) as mock_interfaz_progreso:
-        ventana.abrirProgresoClientes()
-
-    mock_interfaz_progreso.assert_called_once_with(
-        notebook_mock,
-        controles["clientes"],
-        control_progreso,
-    )
-
-    notebook_mock.add.assert_called_once_with(
-        pestania_progreso,
-        text="Progreso de clientes",
-    )
-
-
-def test_abrir_progreso_clientes_falla_sin_control_progreso(
-    ventana,
-):
-    """
-    Verifica error claro cuando falta ControlProgreso.
-    """
-    ventana._notebook = MagicMock()
-
-    ventana._controladores = {
-        "control_auth": MagicMock(),
-    }
-
-    with pytest.raises(RuntimeError) as error:
-        ventana.abrirProgresoClientes()
-
-    assert str(error.value) == (
-        "No se encontró ControlProgreso en "
-        "los controladores del sistema."
-    )
+    dao._bd._conexion.commit.assert_not_called()

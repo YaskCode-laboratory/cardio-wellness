@@ -735,3 +735,36 @@ def test_abrir_progreso_clientes_falla_sin_control_progreso(
         "No se encontró ControlProgreso en "
         "los controladores del sistema."
     )
+
+def test_abrir_rutinas_asignadas_modo_real(
+    ventana,
+    controles,
+):
+    """
+    Verifica que la pestaña de rutinas asignadas reciba
+    todas las dependencias cuando la interfaz está en modo real.
+    """
+    notebook_mock = MagicMock()
+    autenticacion = MagicMock()
+    pestania_mock = MagicMock()
+
+    ventana._notebook = notebook_mock
+    ventana._control_autenticacion = autenticacion
+    ventana._controladores = {
+        "control_auth": autenticacion,
+    }
+
+    with patch(
+        "src.interfaz.interfaz_administrador."
+        "InterfazRutinasAsignadas",
+        return_value=pestania_mock,
+    ) as interfaz_mock:
+        ventana.abrirRutinasAsignadas()
+
+    interfaz_mock.assert_called_once_with(
+        master=notebook_mock,
+        control_rutinas=controles["rutinas"],
+        control_sesiones=controles["sesiones"],
+        control_autenticacion=autenticacion,
+        control_ejercicios=controles["ejercicios"],
+    )

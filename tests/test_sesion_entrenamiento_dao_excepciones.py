@@ -208,3 +208,69 @@ def test_dao_listar_cliente_sin_sesiones(
 
     assert isinstance(resultado, list)
     assert resultado == []
+
+def test_validar_sesion_rechaza_asignacion_sin_ejercicio_asignado():
+    sesion = crear_sesion(
+        id_cliente=1,
+    )
+
+    sesion._id_asignacion = 10
+    sesion._id_asignacion_ejercicio = None
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            "La sesión debe indicar tanto la asignación "
+            "como el ejercicio asignado"
+        ),
+    ):
+        SesionEntrenamientoDAO._validar_sesion(sesion)
+
+
+@pytest.mark.parametrize(
+    "pgcode, mensaje",
+    [
+        (
+            "23503",
+            (
+                "El cliente, la rutina, la asignación "
+                "o el ejercicio asignado no existe."
+            ),
+        ),
+        (
+            "23514",
+            (
+                "Las veces realizadas deben ser mayores "
+                "o iguales a cero y no pueden superar "
+                "las planificadas."
+            ),
+        ),
+        (
+            "23502",
+            "Falta un dato obligatorio para guardar la sesión.",
+        ),
+        (
+            "99999",
+            (
+                "No se pudo guardar o actualizar la sesión "
+                "por una restricción de integridad."
+            ),
+        ),
+    ],
+)
+def test_convertir_error_integridad(
+    pgcode,
+    mensaje,
+):
+    class ErrorIntegridadPrueba:
+        def __init__(self, codigo):
+            self.pgcode = codigo
+
+    error = ErrorIntegridadPrueba(pgcode)
+
+    resultado = SesionEntrenamientoDAO._convertir_error_integridad(
+        error,
+    )
+
+    assert isinstance(resultado, ValueError)
+    assert str(resultado) == mensaje

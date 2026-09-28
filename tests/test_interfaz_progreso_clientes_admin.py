@@ -2,7 +2,10 @@ from datetime import date
 from decimal import Decimal
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
+from types import SimpleNamespace
+from unittest.mock import Mock
 
+from src.interfaz.interfaz_progreso import InterfazProgreso
 import pytest
 
 from src.interfaz.interfaz_progreso_clientes_admin import (
@@ -1009,3 +1012,25 @@ class TestInterfazProgresoClientesAdmin:
             ._formatear_porcentaje(valor)
             == resultado
         )
+
+def test_evaluar_meta_muestra_error_si_peso_objetivo_no_configurado():
+    vista = InterfazProgreso.__new__(InterfazProgreso)
+
+    vista._cliente = SimpleNamespace(
+        objetivo="Bajar de peso",
+        peso=82.0,
+        peso_objetivo=None,
+    )
+
+    vista._lbl_meta = Mock()
+
+    vista._evaluar_meta(
+        {
+            "total_sesiones": 0,
+        }
+    )
+
+    vista._lbl_meta.config.assert_called_once_with(
+        text="Meta de peso no configurada.",
+        foreground="red",
+    )

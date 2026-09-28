@@ -1,3 +1,4 @@
+from datetime import date
 from unittest.mock import MagicMock, patch
 from types import SimpleNamespace
 
@@ -620,3 +621,404 @@ def test_actualizar_cliente_actualiza_datos_generales_y_cliente(dao):
     )
 
     dao._conexion._conexion.commit.assert_called_once()
+
+def test_guardar_convierte_error_integridad_correo_duplicado(dao):
+    usuario = crear_administrador()
+
+    dao._conexion.ejecutar_consulta.side_effect = (
+        ErrorIntegridadSimulado("23505")
+    )
+
+    with patch(
+        "src.persistencia.usuario_dao.IntegrityError",
+        ErrorIntegridadSimulado,
+    ):
+        with pytest.raises(
+            ValueError,
+            match="El correo ya está registrado",
+        ):
+            dao.guardar(usuario, "Clave123!")
+
+    dao._conexion._conexion.rollback.assert_called_once()
+
+
+def test_buscar_por_correo_retorna_none_si_no_hay_resultados(dao):
+    dao._conexion.ejecutar_consulta.return_value = []
+
+    resultado = dao.buscar_por_correo(
+        "nadie@example.com"
+    )
+
+    assert resultado is None
+
+    dao._conexion.ejecutar_consulta.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    "contrasenia",
+    [
+        None,
+        "",
+        123,
+        False,
+    ],
+)
+def test_restablecer_contrasenia_administrador_rechaza_clave_vacia(
+    dao,
+    contrasenia,
+):
+    with pytest.raises(
+        ValueError,
+        match="La nueva contraseña no puede estar vacía",
+    ):
+        dao.restablecer_contrasenia_administrador(
+            "admin@example.com",
+            contrasenia,
+        )
+
+    dao._conexion.ejecutar_consulta.assert_not_called()
+
+
+def test_restablecer_contrasenia_administrador_rechaza_clave_debil(
+    dao,
+):
+    with patch(
+        "src.persistencia.usuario_dao."
+        "GestorSeguridad.validar_fortaleza_contrasena",
+        return_value=False,
+    ):
+        with pytest.raises(
+            ValueError,
+            match="La contraseña debe tener al menos",
+        ):
+            dao.restablecer_contrasenia_administrador(
+                "admin@example.com",
+                "ClaveDebil",
+            )
+
+    dao._conexion.ejecutar_consulta.assert_not_called()
+
+
+def test_restablecer_contrasenia_administrador_rechaza_si_no_existe(
+    dao,
+):
+    dao._conexion.ejecutar_consulta.return_value = []
+
+    with patch(
+        "src.persistencia.usuario_dao."
+        "GestorSeguridad.validar_fortaleza_contrasena",
+        return_value=True,
+    ), patch(
+        "src.persistencia.usuario_dao."
+        "GestorSeguridad.generar_hash",
+        return_value="hash-nuevo",
+    ):
+        with pytest.raises(
+            ValueError,
+            match=(
+                "No se encontró un administrador "
+                "con ese correo electrónico"
+            ),
+        ):
+            dao.restablecer_contrasenia_administrador(
+                "ADMIN@EXAMPLE.COM",
+                "NuevaClave123!",
+            )
+
+    dao._conexion._conexion.rollback.assert_called_once()
+
+    sql, parametros = (
+        dao._conexion.ejecutar_consulta.call_args.args
+    )
+
+    assert "UPDATE usuarios" in sql
+    assert parametros == (
+        "hash-nuevo",
+        "admin@example.com",
+    )
+
+
+def test_restablecer_contrasenia_administrador_rechaza_hash_no_verificable(
+    dao,
+):
+    dao._conexion.ejecutar_consulta.return_value = [
+        {
+            "id_usuario": 1,
+            "correo_electronico": "admin@example.com",
+            "contrasenia_hash": "hash-guardado",
+        },
+    ]
+
+    with patch(
+        "src.persistencia.usuario_dao."
+        "GestorSeguridad.validar_fortaleza_contrasena",
+        return_value=True,
+    ), patch(
+        "src.persistencia.usuario_dao."
+        "GestorSeguridad.generar_hash",
+        return_value="hash-nuevo",
+    ), patch(
+        "src.persistencia.usuario_dao."
+        "GestorSeguridad.verificar_contrasenia",
+        return_value=False,
+    ):
+        with pytest.raises(
+            RuntimeError,
+            match=(
+                "No se pudo confirmar que la nueva "
+                "contraseña fue guardada"
+            ),
+        ):
+            dao.restablecer_contrasenia_administrador(
+                "admin@example.com",
+                "NuevaClave123!",
+            )
+
+    dao._conexion._conexion.rollback.assert_called_once()
+
+
+def test_restablecer_contrasenia_administrador_correctamente(
+    dao,
+):
+    dao._conexion.ejecutar_consulta.return_value = [
+        {
+            "id_usuario": 1,
+            "correo_electronico": "admin@example.com",
+            "contrasenia_hash": "hash-nuevo",
+        },
+    ]
+
+    with patch(
+        "src.persistencia.usuario_dao."
+        "GestorSeguridad.validar_fortaleza_contrasena",
+        return_value=True,
+    ) as mock_fortaleza, patch(
+        "src.persistencia.usuario_dao."
+        "GestorSeguridad.generar_hash",
+        return_value="hash-nuevo",
+    ) as mock_generar_hash, patch(
+        "src.persistencia.usuario_dao."
+        "GestorSeguridad.verificar_contrasenia",
+        return_value=True,
+    ) as mock_verificar:
+        resultado = dao.restablecer_contrasenia_administrador(
+            " ADMIN@EXAMPLE.COM ",
+            "NuevaClave123!",
+        )
+
+    assert resultado is True
+
+    mock_fortaleza.assert_called_once_with(
+        "NuevaClave123!"
+    )
+
+    mock_generar_hash.assert_called_once_with(
+        "NuevaClave123!"
+    )
+
+    mock_verificar.assert_called_once_with(
+        "NuevaClave123!",
+        "hash-nuevo",
+    )
+
+    sql, parametros = (
+        dao._conexion.ejecutar_consulta.call_args.args
+    )
+
+    assert "UPDATE usuarios" in sql
+
+    assert parametros == (
+        "hash-nuevo",
+        "admin@example.com",
+    )
+
+    dao._conexion._conexion.rollback.assert_not_called()
+
+
+def test_restablecer_contrasenia_administrador_hace_rollback_si_falla(
+    dao,
+):
+    dao._conexion.ejecutar_consulta.side_effect = RuntimeError(
+        "Fallo de base de datos"
+    )
+
+    with patch(
+        "src.persistencia.usuario_dao."
+        "GestorSeguridad.validar_fortaleza_contrasena",
+        return_value=True,
+    ), patch(
+        "src.persistencia.usuario_dao."
+        "GestorSeguridad.generar_hash",
+        return_value="hash-nuevo",
+    ):
+        with pytest.raises(
+            RuntimeError,
+            match="Fallo de base de datos",
+        ):
+            dao.restablecer_contrasenia_administrador(
+                "admin@example.com",
+                "NuevaClave123!",
+            )
+
+    dao._conexion._conexion.rollback.assert_called_once()
+
+
+def test_listar_administradores_retorna_resultado_consulta(dao):
+    administradores = [
+        {
+            "id_usuario": 2,
+            "nombre": "Ana",
+            "apellido": "Admin",
+            "correo_electronico": "ana@example.com",
+            "edad": 30,
+            "fecha_registro": "2026-01-01",
+        },
+    ]
+
+    dao._conexion.ejecutar_consulta.return_value = (
+        administradores
+    )
+
+    resultado = dao.listar_administradores()
+
+    assert resultado == administradores
+
+    sql = dao._conexion.ejecutar_consulta.call_args.args[0]
+
+    assert "SELECT" in sql
+    assert "FROM usuarios" in sql
+    assert "administrador" in sql
+
+    dao._conexion._conexion.rollback.assert_not_called()
+
+
+def test_listar_administradores_hace_rollback_si_falla(dao):
+    dao._conexion.ejecutar_consulta.side_effect = RuntimeError(
+        "Fallo al listar administradores"
+    )
+
+    with pytest.raises(
+        RuntimeError,
+        match="Fallo al listar administradores",
+    ):
+        dao.listar_administradores()
+
+    dao._conexion._conexion.rollback.assert_called_once()
+
+def test_guardar_cliente_guarda_datos_generales_y_perfil(
+    dao,
+):
+    cliente = Cliente(
+        nombre="Laura",
+        apellido="Gomez",
+        correo_electronico="laura.gomez@example.com",
+        contrasenia_hash=GestorSeguridad.generar_hash(
+            "Clave123!"
+        ),
+        edad=28,
+        genero="mujer",
+        peso=72.5,
+        peso_objetivo=65.0,
+        altura=1.68,
+        objetivo="Bajar de peso",
+    )
+
+    fecha_registro = date(2026, 1, 10)
+    fecha_ingreso = date(2026, 1, 11)
+
+    dao._conexion.ejecutar_consulta.side_effect = [
+        [
+            {
+                "id_usuario": 25,
+                "fecha_registro": fecha_registro,
+            },
+        ],
+        [
+            {
+                "fecha_ingreso": fecha_ingreso,
+            },
+        ],
+    ]
+
+    resultado = dao.guardar(
+        cliente,
+        contrasenia_plana="Clave123!",
+    )
+
+    assert resultado is cliente
+    assert cliente.id_usuario == 25
+    assert cliente.fecha_registro == fecha_registro
+    assert cliente.fecha_ingreso == fecha_ingreso
+    assert cliente.genero == "MUJER"
+
+    assert dao._conexion.ejecutar_consulta.call_count == 2
+
+    primera_llamada = (
+        dao._conexion.ejecutar_consulta.call_args_list[0]
+    )
+    segunda_llamada = (
+        dao._conexion.ejecutar_consulta.call_args_list[1]
+    )
+
+    sql_usuario, parametros_usuario = primera_llamada.args
+    sql_cliente, parametros_cliente = segunda_llamada.args
+
+    assert "INSERT INTO usuarios" in sql_usuario
+    assert parametros_usuario[0] == "Laura"
+    assert parametros_usuario[1] == "Gomez"
+    assert parametros_usuario[2] == (
+        "laura.gomez@example.com"
+    )
+    assert parametros_usuario[4] == 28
+    assert parametros_usuario[5] == "cliente"
+
+    assert "INSERT INTO clientes" in sql_cliente
+
+    assert parametros_cliente[0] == 25
+    assert float(parametros_cliente[1]) == 72.5
+    assert float(parametros_cliente[2]) == 65.0
+    assert float(parametros_cliente[3]) == 1.68
+    assert parametros_cliente[4] == "Bajar de peso"
+    assert parametros_cliente[5] == "MUJER"
+
+    dao._conexion._conexion.commit.assert_called_once()
+    dao._conexion._conexion.rollback.assert_not_called()
+
+
+def test_buscar_por_correo_retorna_cliente_desde_fila(
+    dao,
+):
+    fila = crear_fila_cliente(
+        tipo_usuario="cliente",
+        fecha_registro=date(2026, 1, 10),
+        fecha_ingreso=date(2026, 1, 11),
+    )
+
+    dao._conexion.ejecutar_consulta.return_value = [fila]
+
+    resultado = dao.buscar_por_correo(
+        " ANA.PRUEBA@EXAMPLE.COM "
+    )
+
+    assert isinstance(resultado, Cliente)
+    assert resultado.id_usuario == 1
+    assert resultado.nombre == "Ana"
+    assert resultado.apellido == "Prueba"
+    assert resultado.correo_electronico == (
+        "ana.prueba@example.com"
+    )
+    assert resultado.edad == 30
+    assert float(resultado.peso) == 70.0
+    assert float(resultado.peso_objetivo) == 65.0
+    assert float(resultado.altura) == 1.70
+    assert resultado.objetivo == "Mejorar resistencia"
+    assert resultado.genero == "MUJER"
+    assert resultado.fecha_registro == date(2026, 1, 10)
+    assert resultado.fecha_ingreso == date(2026, 1, 11)
+
+    sql, parametros = (
+        dao._conexion.ejecutar_consulta.call_args.args
+    )
+
+    assert "LOWER" in sql
+    assert parametros == ("ana.prueba@example.com",)

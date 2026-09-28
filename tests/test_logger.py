@@ -224,3 +224,22 @@ def test_ejecucion_directa_del_modulo(
 
     assert "Configurando logger..." in salida
     assert "Logger configurado correctamente" in salida
+
+def test_registrar_actividad_normaliza_usuario_y_accion_vacios():
+    """
+    Si usuario o acción contienen solamente espacios,
+    deben sustituirse por sus valores predeterminados.
+    """
+    with patch.object(
+        modulo_logger.logger,
+        "info",
+    ) as mock_info:
+        modulo_logger.registrar_actividad(
+            "   ",
+            "   ",
+            None,
+        )
+
+    mock_info.assert_called_once_with(
+        "SISTEMA, ACCION_NO_ESPECIFICADA,",
+    )

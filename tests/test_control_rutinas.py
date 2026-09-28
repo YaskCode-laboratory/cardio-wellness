@@ -1,5 +1,5 @@
 from types import SimpleNamespace
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -967,3 +967,811 @@ def test_obtener_id_objeto_desde_entero():
     )
 
     assert resultado == 9
+
+@pytest.fixture
+def asignacion_activa():
+    return SimpleNamespace(
+        id_asignacion=50,
+        id_rutina=8,
+        estado=SimpleNamespace(value="ACTIVA"),
+    )
+
+
+@pytest.fixture
+def ejercicio_asignado():
+    return SimpleNamespace(
+        id_asignacion_ejercicio=70,
+        id_asignacion=50,
+        id_ejercicio=15,
+        orden_ejercicio=1,
+        veces_planificadas=3,
+        activo=True,
+    )
+
+
+def test_propiedad_asignacion_ejercicio_dao(
+    controlador,
+    mock_asignacion_ejercicio_dao,
+):
+    assert (
+        controlador.asignacion_ejercicio_dao
+        is mock_asignacion_ejercicio_dao
+    )
+
+
+def test_asignar_rutina_copia_ejercicios_de_plantilla(
+    controlador,
+    mock_rutina_dao,
+    mock_asignacion_dao,
+    mock_asignacion_ejercicio_dao,
+):
+    mock_rutina_dao.buscar_por_id.return_value = (
+        SimpleNamespace(id_rutina=9)
+    )
+
+    mock_asignacion_dao.obtener_activa_por_cliente.return_value = None
+
+    mock_asignacion_dao.asignar.return_value = {
+        "id_asignacion": 55,
+        "activa": True,
+    }
+
+    resultado = controlador.asignar_rutina(
+        cliente=3,
+        rutina=9,
+        asignado_por=1,
+        observaciones="  Rutina nueva  ",
+    )
+
+    assert resultado["id_asignacion"] == 55
+
+    mock_rutina_dao.buscar_por_id.assert_called_once_with(9)
+
+    mock_asignacion_ejercicio_dao.copiar_desde_rutina.assert_called_once_with(
+        id_asignacion=55,
+        id_rutina=9,
+    )
+
+
+def test_asignar_rutina_rechaza_rutina_inexistente(
+    controlador,
+    mock_rutina_dao,
+    mock_asignacion_dao,
+):
+    mock_rutina_dao.buscar_por_id.return_value = None
+
+    with pytest.raises(
+        ValueError,
+        match="La rutina seleccionada no existe.",
+    ):
+        controlador.asignar_rutina(
+            cliente=1,
+            rutina=9,
+            asignado_por=2,
+        )
+
+    mock_asignacion_dao.asignar.assert_not_called()
+
+
+def test_asignar_rutina_rechaza_resultado_sin_id_asignacion(
+    controlador,
+    mock_rutina_dao,
+    mock_asignacion_dao,
+    mock_asignacion_ejercicio_dao,
+):
+    mock_rutina_dao.buscar_por_id.return_value = (
+        SimpleNamespace(id_rutina=9)
+    )
+
+    mock_asignacion_dao.obtener_activa_por_cliente.return_value = None
+
+    mock_asignacion_dao.asignar.return_value = {
+        "activa": True,
+    }
+
+    with pytest.raises(
+        RuntimeError,
+        match="No se recibió el ID de la asignación creada.",
+    ):
+        controlador.asignar_rutina(
+            cliente=1,
+            rutina=9,
+            asignado_por=2,
+        )
+
+    mock_asignacion_ejercicio_dao.copiar_desde_rutina.assert_not_called()
+
+
+def test_cambiar_rutina_asignada_exitosamente(
+    controlador,
+    mock_rutina_dao,
+    mock_asignacion_dao,
+):
+    rutina_nueva = SimpleNamespace(id_rutina=20)
+
+    asignacion_anterior = SimpleNamespace(
+        id_asignacion=50,
+        id_rutina=8,
+    )
+
+    mock_rutina_dao.buscar_por_id.return_value = rutina_nueva
+
+    mock_asignacion_dao.obtener_activa_por_cliente.return_value = (
+        asignacion_anterior
+    )
+
+    mock_asignacion_dao.cancelar_asignacion.return_value = True
+
+    resultado_esperado = {
+        "id_asignacion": 60,
+        "activa": True,
+    }
+
+    with patch.object(
+        controlador,
+        "asignar_rutina",
+        return_value=resultado_esperado,
+    ) as mock_asignar:
+        resultado = controlador.cambiar_rutina_asignada(
+            id_cliente=3,
+            id_nueva_rutina=20,
+            usuario_accion=1,
+            observaciones="Cambio recomendado",
+        )
+
+    assert resultado == resultado_esperado
+
+    mock_asignacion_dao.cancelar_asignacion.assert_called_once_with(
+        50
+    )
+
+    mock_asignar.assert_called_once_with(
+        cliente=3,
+        rutina=20,
+        asignado_por=1,
+        observaciones="Cambio recomendado",
+    )
+
+
+def test_cambiar_rutina_asignada_rechaza_rutina_inexistente(
+    controlador,
+    mock_rutina_dao,
+):
+    mock_rutina_dao.buscar_por_id.return_value = None
+
+    with pytest.raises(
+        ValueError,
+        match="La nueva rutina seleccionada no existe.",
+    ):
+        controlador.cambiar_rutina_asignada(
+            id_cliente=3,
+            id_nueva_rutina=20,
+            usuario_accion=1,
+        )
+
+
+def test_cambiar_rutina_asignada_rechaza_cliente_sin_asignacion_activa(
+    controlador,
+    mock_rutina_dao,
+    mock_asignacion_dao,
+):
+    mock_rutina_dao.buscar_por_id.return_value = (
+        SimpleNamespace(id_rutina=20)
+    )
+
+    mock_asignacion_dao.obtener_activa_por_cliente.return_value = None
+
+    with pytest.raises(
+        ValueError,
+        match="El cliente no tiene una rutina activa",
+    ):
+        controlador.cambiar_rutina_asignada(
+            id_cliente=3,
+            id_nueva_rutina=20,
+            usuario_accion=1,
+        )
+
+
+def test_cambiar_rutina_asignada_rechaza_misma_rutina(
+    controlador,
+    mock_rutina_dao,
+    mock_asignacion_dao,
+):
+    mock_rutina_dao.buscar_por_id.return_value = (
+        SimpleNamespace(id_rutina=20)
+    )
+
+    mock_asignacion_dao.obtener_activa_por_cliente.return_value = (
+        SimpleNamespace(
+            id_asignacion=50,
+            id_rutina=20,
+        )
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="El cliente ya tiene asignada esa rutina.",
+    ):
+        controlador.cambiar_rutina_asignada(
+            id_cliente=3,
+            id_nueva_rutina=20,
+            usuario_accion=1,
+        )
+
+
+def test_cambiar_rutina_asignada_rechaza_cancelacion_fallida(
+    controlador,
+    mock_rutina_dao,
+    mock_asignacion_dao,
+):
+    mock_rutina_dao.buscar_por_id.return_value = (
+        SimpleNamespace(id_rutina=20)
+    )
+
+    mock_asignacion_dao.obtener_activa_por_cliente.return_value = (
+        SimpleNamespace(
+            id_asignacion=50,
+            id_rutina=8,
+        )
+    )
+
+    mock_asignacion_dao.cancelar_asignacion.return_value = False
+
+    with pytest.raises(
+        RuntimeError,
+        match="No se pudo cancelar la rutina activa.",
+    ):
+        controlador.cambiar_rutina_asignada(
+            id_cliente=3,
+            id_nueva_rutina=20,
+            usuario_accion=1,
+        )
+
+
+def test_listar_ejercicios_de_asignacion_exitosamente(
+    controlador,
+    mock_asignacion_dao,
+    mock_asignacion_ejercicio_dao,
+    asignacion_activa,
+):
+    mock_asignacion_dao.buscar_por_id.return_value = (
+        asignacion_activa
+    )
+
+    ejercicios = [
+        SimpleNamespace(id_asignacion_ejercicio=1),
+        SimpleNamespace(id_asignacion_ejercicio=2),
+    ]
+
+    (
+        mock_asignacion_ejercicio_dao
+        .listar_por_asignacion
+        .return_value
+    ) = ejercicios
+
+    resultado = controlador.listar_ejercicios_de_asignacion(
+        id_asignacion=50,
+        solo_activos=True,
+    )
+
+    assert resultado == ejercicios
+
+    (
+        mock_asignacion_ejercicio_dao
+        .listar_por_asignacion
+        .assert_called_once_with(
+            id_asignacion=50,
+            solo_activos=True,
+        )
+    )
+
+
+def test_listar_ejercicios_de_asignacion_rechaza_solo_activos_invalido(
+    controlador,
+):
+    with pytest.raises(
+        ValueError,
+        match="solo_activos debe ser booleano.",
+    ):
+        controlador.listar_ejercicios_de_asignacion(
+            id_asignacion=50,
+            solo_activos="si",
+        )
+
+
+def test_listar_ejercicios_de_asignacion_rechaza_asignacion_inexistente(
+    controlador,
+    mock_asignacion_dao,
+):
+    mock_asignacion_dao.buscar_por_id.return_value = None
+
+    with pytest.raises(
+        ValueError,
+        match="La asignación indicada no existe.",
+    ):
+        controlador.listar_ejercicios_de_asignacion(
+            id_asignacion=50,
+        )
+
+
+def test_agregar_ejercicio_a_asignacion_exitosamente_con_orden_automatico(
+    controlador,
+    mock_asignacion_dao,
+    mock_asignacion_ejercicio_dao,
+    asignacion_activa,
+):
+    mock_asignacion_dao.buscar_por_id.return_value = (
+        asignacion_activa
+    )
+
+    (
+        mock_asignacion_ejercicio_dao
+        .obtener_siguiente_orden
+        .return_value
+    ) = 4
+
+    ejercicio_guardado = SimpleNamespace(
+        id_asignacion_ejercicio=70,
+    )
+
+    mock_asignacion_ejercicio_dao.guardar.return_value = (
+        ejercicio_guardado
+    )
+
+    resultado = controlador.agregar_ejercicio_a_asignacion(
+        id_asignacion=50,
+        id_ejercicio=15,
+        veces_planificadas=3,
+        usuario_accion=1,
+    )
+
+    assert resultado is ejercicio_guardado
+
+    (
+        mock_asignacion_ejercicio_dao
+        .obtener_siguiente_orden
+        .assert_called_once_with(50)
+    )
+
+    ejercicio_enviado = (
+        mock_asignacion_ejercicio_dao
+        .guardar
+        .call_args
+        .args[0]
+    )
+
+    assert ejercicio_enviado.id_asignacion == 50
+    assert ejercicio_enviado.id_ejercicio == 15
+    assert ejercicio_enviado.orden_ejercicio == 4
+    assert ejercicio_enviado.veces_planificadas == 3
+
+
+def test_agregar_ejercicio_a_asignacion_acepta_orden_manual(
+    controlador,
+    mock_asignacion_dao,
+    mock_asignacion_ejercicio_dao,
+    asignacion_activa,
+):
+    mock_asignacion_dao.buscar_por_id.return_value = (
+        asignacion_activa
+    )
+
+    mock_asignacion_ejercicio_dao.guardar.return_value = (
+        SimpleNamespace(id_asignacion_ejercicio=70)
+    )
+
+    controlador.agregar_ejercicio_a_asignacion(
+        id_asignacion=50,
+        id_ejercicio=15,
+        veces_planificadas=3,
+        usuario_accion=1,
+        orden=8,
+    )
+
+    (
+        mock_asignacion_ejercicio_dao
+        .obtener_siguiente_orden
+        .assert_not_called()
+    )
+
+    ejercicio_enviado = (
+        mock_asignacion_ejercicio_dao
+        .guardar
+        .call_args
+        .args[0]
+    )
+
+    assert ejercicio_enviado.orden_ejercicio == 8
+
+
+@pytest.mark.parametrize(
+    "veces_planificadas",
+    [
+        0,
+        -1,
+        "3",
+        True,
+        False,
+    ],
+)
+def test_agregar_ejercicio_a_asignacion_rechaza_meta_invalida(
+    controlador,
+    veces_planificadas,
+):
+    with pytest.raises(
+        ValueError,
+        match="Las veces planificadas deben ser",
+    ):
+        controlador.agregar_ejercicio_a_asignacion(
+            id_asignacion=50,
+            id_ejercicio=15,
+            veces_planificadas=veces_planificadas,
+            usuario_accion=1,
+        )
+
+
+def test_agregar_ejercicio_a_asignacion_rechaza_asignacion_inexistente(
+    controlador,
+    mock_asignacion_dao,
+):
+    mock_asignacion_dao.buscar_por_id.return_value = None
+
+    with pytest.raises(
+        ValueError,
+        match="La asignación indicada no existe.",
+    ):
+        controlador.agregar_ejercicio_a_asignacion(
+            id_asignacion=50,
+            id_ejercicio=15,
+            veces_planificadas=3,
+            usuario_accion=1,
+        )
+
+
+def test_agregar_ejercicio_a_asignacion_rechaza_asignacion_inactiva(
+    controlador,
+    mock_asignacion_dao,
+):
+    mock_asignacion_dao.buscar_por_id.return_value = (
+        SimpleNamespace(
+            id_asignacion=50,
+            estado=SimpleNamespace(value="FINALIZADA"),
+        )
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="Solo puede modificar una asignación activa.",
+    ):
+        controlador.agregar_ejercicio_a_asignacion(
+            id_asignacion=50,
+            id_ejercicio=15,
+            veces_planificadas=3,
+            usuario_accion=1,
+        )
+
+
+def test_actualizar_meta_ejercicio_asignado_exitosamente(
+    controlador,
+    mock_asignacion_dao,
+    mock_asignacion_ejercicio_dao,
+    asignacion_activa,
+    ejercicio_asignado,
+):
+    mock_asignacion_ejercicio_dao.buscar_por_id.return_value = (
+        ejercicio_asignado
+    )
+
+    mock_asignacion_dao.buscar_por_id.return_value = (
+        asignacion_activa
+    )
+
+    mock_asignacion_ejercicio_dao.actualizar_meta.return_value = (
+        True
+    )
+
+    resultado = controlador.actualizar_meta_ejercicio_asignado(
+        id_asignacion_ejercicio=70,
+        veces_planificadas=8,
+        usuario_accion=1,
+    )
+
+    assert resultado is True
+
+    (
+        mock_asignacion_ejercicio_dao
+        .actualizar_meta
+        .assert_called_once_with(
+            id_asignacion_ejercicio=70,
+            veces_planificadas=8,
+        )
+    )
+
+
+@pytest.mark.parametrize(
+    "veces_planificadas",
+    [
+        0,
+        -1,
+        "8",
+        True,
+    ],
+)
+def test_actualizar_meta_rechaza_meta_invalida(
+    controlador,
+    veces_planificadas,
+):
+    with pytest.raises(
+        ValueError,
+        match="Las veces planificadas deben ser",
+    ):
+        controlador.actualizar_meta_ejercicio_asignado(
+            id_asignacion_ejercicio=70,
+            veces_planificadas=veces_planificadas,
+            usuario_accion=1,
+        )
+
+
+def test_actualizar_meta_rechaza_ejercicio_asignado_inexistente(
+    controlador,
+    mock_asignacion_ejercicio_dao,
+):
+    mock_asignacion_ejercicio_dao.buscar_por_id.return_value = None
+
+    with pytest.raises(
+        ValueError,
+        match="El ejercicio asignado no existe.",
+    ):
+        controlador.actualizar_meta_ejercicio_asignado(
+            id_asignacion_ejercicio=70,
+            veces_planificadas=8,
+            usuario_accion=1,
+        )
+
+
+def test_actualizar_meta_rechaza_asignacion_inexistente(
+    controlador,
+    mock_asignacion_dao,
+    mock_asignacion_ejercicio_dao,
+    ejercicio_asignado,
+):
+    mock_asignacion_ejercicio_dao.buscar_por_id.return_value = (
+        ejercicio_asignado
+    )
+
+    mock_asignacion_dao.buscar_por_id.return_value = None
+
+    with pytest.raises(
+        ValueError,
+        match="La asignación asociada no existe.",
+    ):
+        controlador.actualizar_meta_ejercicio_asignado(
+            id_asignacion_ejercicio=70,
+            veces_planificadas=8,
+            usuario_accion=1,
+        )
+
+
+def test_actualizar_meta_rechaza_asignacion_inactiva(
+    controlador,
+    mock_asignacion_dao,
+    mock_asignacion_ejercicio_dao,
+    ejercicio_asignado,
+):
+    mock_asignacion_ejercicio_dao.buscar_por_id.return_value = (
+        ejercicio_asignado
+    )
+
+    mock_asignacion_dao.buscar_por_id.return_value = (
+        SimpleNamespace(
+            id_asignacion=50,
+            estado=SimpleNamespace(value="CANCELADA"),
+        )
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="Solo puede modificar una asignación activa.",
+    ):
+        controlador.actualizar_meta_ejercicio_asignado(
+            id_asignacion_ejercicio=70,
+            veces_planificadas=8,
+            usuario_accion=1,
+        )
+
+
+def test_actualizar_meta_no_registra_log_si_dao_devuelve_falso(
+    controlador,
+    mock_asignacion_dao,
+    mock_asignacion_ejercicio_dao,
+    asignacion_activa,
+    ejercicio_asignado,
+):
+    mock_asignacion_ejercicio_dao.buscar_por_id.return_value = (
+        ejercicio_asignado
+    )
+
+    mock_asignacion_dao.buscar_por_id.return_value = (
+        asignacion_activa
+    )
+
+    mock_asignacion_ejercicio_dao.actualizar_meta.return_value = (
+        False
+    )
+
+    resultado = controlador.actualizar_meta_ejercicio_asignado(
+        id_asignacion_ejercicio=70,
+        veces_planificadas=8,
+        usuario_accion=1,
+    )
+
+    assert resultado is False
+    controlador._registrar_log.assert_not_called()
+
+
+def test_desactivar_ejercicio_de_asignacion_exitosamente(
+    controlador,
+    mock_asignacion_dao,
+    mock_asignacion_ejercicio_dao,
+    asignacion_activa,
+    ejercicio_asignado,
+):
+    mock_asignacion_ejercicio_dao.buscar_por_id.return_value = (
+        ejercicio_asignado
+    )
+
+    mock_asignacion_dao.buscar_por_id.return_value = (
+        asignacion_activa
+    )
+
+    mock_asignacion_ejercicio_dao.desactivar.return_value = True
+
+    resultado = controlador.desactivar_ejercicio_de_asignacion(
+        id_asignacion_ejercicio=70,
+        usuario_accion=1,
+    )
+
+    assert resultado is True
+
+    mock_asignacion_ejercicio_dao.desactivar.assert_called_once_with(
+        70
+    )
+
+
+def test_desactivar_ejercicio_rechaza_ejercicio_inexistente(
+    controlador,
+    mock_asignacion_ejercicio_dao,
+):
+    mock_asignacion_ejercicio_dao.buscar_por_id.return_value = None
+
+    with pytest.raises(
+        ValueError,
+        match="El ejercicio asignado no existe.",
+    ):
+        controlador.desactivar_ejercicio_de_asignacion(
+            id_asignacion_ejercicio=70,
+            usuario_accion=1,
+        )
+
+
+def test_desactivar_ejercicio_rechaza_asignacion_inexistente(
+    controlador,
+    mock_asignacion_dao,
+    mock_asignacion_ejercicio_dao,
+    ejercicio_asignado,
+):
+    mock_asignacion_ejercicio_dao.buscar_por_id.return_value = (
+        ejercicio_asignado
+    )
+
+    mock_asignacion_dao.buscar_por_id.return_value = None
+
+    with pytest.raises(
+        ValueError,
+        match="La asignación asociada no existe.",
+    ):
+        controlador.desactivar_ejercicio_de_asignacion(
+            id_asignacion_ejercicio=70,
+            usuario_accion=1,
+        )
+
+
+def test_desactivar_ejercicio_rechaza_asignacion_inactiva(
+    controlador,
+    mock_asignacion_dao,
+    mock_asignacion_ejercicio_dao,
+    ejercicio_asignado,
+):
+    mock_asignacion_ejercicio_dao.buscar_por_id.return_value = (
+        ejercicio_asignado
+    )
+
+    mock_asignacion_dao.buscar_por_id.return_value = (
+        SimpleNamespace(
+            id_asignacion=50,
+            estado=SimpleNamespace(value="FINALIZADA"),
+        )
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="Solo puede modificar una asignación activa.",
+    ):
+        controlador.desactivar_ejercicio_de_asignacion(
+            id_asignacion_ejercicio=70,
+            usuario_accion=1,
+        )
+
+
+def test_desactivar_ejercicio_no_registra_log_si_dao_devuelve_falso(
+    controlador,
+    mock_asignacion_dao,
+    mock_asignacion_ejercicio_dao,
+    asignacion_activa,
+    ejercicio_asignado,
+):
+    mock_asignacion_ejercicio_dao.buscar_por_id.return_value = (
+        ejercicio_asignado
+    )
+
+    mock_asignacion_dao.buscar_por_id.return_value = (
+        asignacion_activa
+    )
+
+    mock_asignacion_ejercicio_dao.desactivar.return_value = False
+
+    resultado = controlador.desactivar_ejercicio_de_asignacion(
+        id_asignacion_ejercicio=70,
+        usuario_accion=1,
+    )
+
+    assert resultado is False
+    controlador._registrar_log.assert_not_called()
+
+
+def test_obtener_progreso_asignacion_exitosamente(
+    controlador,
+    mock_asignacion_dao,
+    mock_asignacion_ejercicio_dao,
+    asignacion_activa,
+):
+    mock_asignacion_dao.buscar_por_id.return_value = (
+        asignacion_activa
+    )
+
+    progreso = [
+        {
+            "id_asignacion_ejercicio": 70,
+            "veces_completadas": 2,
+            "veces_planificadas": 3,
+        },
+    ]
+
+    (
+        mock_asignacion_ejercicio_dao
+        .obtener_progreso
+        .return_value
+    ) = progreso
+
+    resultado = controlador.obtener_progreso_asignacion(50)
+
+def test_obtener_progreso_asignacion_lanza_error_si_no_existe(
+    controlador,
+    mock_asignacion_dao,
+    mock_asignacion_ejercicio_dao,
+):
+    mock_asignacion_dao.buscar_por_id.return_value = None
+
+    with pytest.raises(
+        ValueError,
+        match="La asignación indicada no existe.",
+    ):
+        controlador.obtener_progreso_asignacion(
+            id_asignacion=50,
+        )
+
+    mock_asignacion_dao.buscar_por_id.assert_called_once_with(
+        50
+    )
+
+    mock_asignacion_ejercicio_dao.obtener_progreso.assert_not_called()

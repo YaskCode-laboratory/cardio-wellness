@@ -1,4 +1,4 @@
-from typing import Any, Optional
+﻿from typing import Any, Optional
 
 
 import tkinter as tk
@@ -366,7 +366,7 @@ class InterfazCliente(tk.Tk):
         valor: Any,
     ) -> str:
         """
-        Formatea un número decimal.
+        Formatea un nÃºmero decimal.
         """
         if valor is None or valor == "":
             return "-"
@@ -382,7 +382,7 @@ class InterfazCliente(tk.Tk):
 
     def consultarRutinaActiva(self) -> None:
         """
-        Crea y carga la pestaña de rutina activa.
+        Crea y carga la pestaÃ±a de rutina activa.
         """
         pestania_rutina = ttk.Frame(
             self._notebook,
@@ -434,7 +434,7 @@ class InterfazCliente(tk.Tk):
         columnas = (
             "Ejercicio",
             "Tipo",
-            "Duración",
+            "DuraciÃ³n",
             "Intensidad",
         )
 
@@ -448,7 +448,7 @@ class InterfazCliente(tk.Tk):
         anchos = {
             "Ejercicio": 240,
             "Tipo": 180,
-            "Duración": 140,
+            "DuraciÃ³n": 140,
             "Intensidad": 160,
         }
 
@@ -481,7 +481,7 @@ class InterfazCliente(tk.Tk):
 
     def consultarProgreso(self) -> None:
         """
-        Crea la pestaña de progreso.
+        Crea la pestaÃ±a de progreso.
         """
         if self._es_modo_pruebas():
             pestania_progreso = InterfazProgreso(
@@ -509,7 +509,7 @@ class InterfazCliente(tk.Tk):
 
     def registrarSesion(self) -> None:
         """
-        Crea la pestaña de registro de sesión.
+        Crea la pestaÃ±a de registro de sesión.
         """
         if self._es_modo_pruebas():
             pestania_sesion = InterfazRegistroSesion(
@@ -625,15 +625,8 @@ class InterfazCliente(tk.Tk):
 
     def _actualizar_rutina_activa(self) -> None:
         """
-        Recarga los ejercicios de la asignación activa
-        sin cerrar sesión ni cambiar de pestaña.
-        """
-        self._cargar_datos_rutina()
-
-    def _actualizar_rutina_activa(self) -> None:
-        """
         Recarga manualmente la rutina activa sin cerrar
-        sesión ni cambiar de pestaña.
+        sesión ni cambiar de pestaÃ±a.
         """
         self._cargar_datos_rutina()
 
@@ -691,8 +684,8 @@ class InterfazCliente(tk.Tk):
             if id_rutina is None:
                 self._lbl_rutina_nombre.config(
                     text=(
-                        "La asignación no contiene "
-                        "una rutina válida."
+                    "La asignación no contiene "
+                    "una rutina válida."
                     )
                 )
                 return
@@ -849,7 +842,7 @@ class InterfazCliente(tk.Tk):
 
     def _mostrar_error_rutina(self) -> None:
         """
-        Muestra aviso cuando la rutina asignada es inválida.
+        Muestra aviso cuando la rutina asignada es invÃ¡lida.
         """
         pestania_sesion = ttk.Frame(
             self._notebook,

@@ -63,8 +63,7 @@ class InterfazGestionEjercicios(InterfazBase):
             ("Descripcion:", 1, 0),
             ("Duracion (min):", 1, 2),
             ("Intensidad:", 2, 0),
-            ("Calorias estimadas:", 2, 2),
-        )
+            )
 
         for texto, fila, columna in etiquetas:
             ttk.Label(
@@ -144,13 +143,18 @@ class InterfazGestionEjercicios(InterfazBase):
             pady=3,
         )
 
-        self._ent_calorias = ttk.Entry(
+        ttk.Label(
             form,
-            width=20,
-        )
-        self._ent_calorias.grid(
+            text=(
+            "Las calorías se calcularán automáticamente "
+            "al registrar la sesión."
+            ),
+            foreground="#555555",
+        ).grid(
             row=2,
-            column=3,
+            column=2,
+            columnspan=2,
+            sticky="w",
             padx=5,
             pady=3,
         )
@@ -303,7 +307,7 @@ class InterfazGestionEjercicios(InterfazBase):
                 descripcion,
                 ejercicio.duracion_minutos,
                 intensidad,
-                ejercicio.calorias_estimadas,
+                "Automático",
             ),
         )
 
@@ -395,16 +399,11 @@ class InterfazGestionEjercicios(InterfazBase):
             datos = self._leer_datos_formulario()
 
             self._control_ejercicios.crear_ejercicio(
-                nombre=datos["nombre"],
-                descripcion=datos["descripcion"],
-                tipo=datos["tipo"],
-                duracion_minutos=datos[
-                    "duracion_minutos"
-                ],
-                intensidad=datos["intensidad"],
-                calorias_estimadas=datos[
-                    "calorias_estimadas"
-                ],
+             nombre=datos["nombre"],
+             descripcion=datos["descripcion"],
+             tipo=datos["tipo"],
+             duracion_minutos=datos["duracion_minutos"],
+             intensidad=datos["intensidad"],
             )
 
             self.mostrar_mensaje(
@@ -413,6 +412,10 @@ class InterfazGestionEjercicios(InterfazBase):
 
             self._limpiar_formulario()
             self.mostrarEjercicios()
+
+            self.winfo_toplevel().event_generate(
+                "<<EjerciciosActualizados>>"
+            )
 
         except ValueError as error:
             self.mostrar_error(str(error))
@@ -480,10 +483,8 @@ class InterfazGestionEjercicios(InterfazBase):
             ejercicio.duracion_minutos = (
                 datos["duracion_minutos"]
             )
+
             ejercicio.intensidad = datos["intensidad"]
-            ejercicio.calorias_estimadas = (
-                datos["calorias_estimadas"]
-            )
 
             self._control_ejercicios.actualizar_ejercicio(
                 ejercicio
@@ -495,6 +496,10 @@ class InterfazGestionEjercicios(InterfazBase):
 
             self._limpiar_formulario()
             self.mostrarEjercicios()
+
+            self.winfo_toplevel().event_generate(
+            "<<EjerciciosActualizados>>"
+)
 
         except ValueError as error:
             self.mostrar_error(str(error))
@@ -557,11 +562,14 @@ class InterfazGestionEjercicios(InterfazBase):
 
             self.mostrarEjercicios()
 
+            self.winfo_toplevel().event_generate(
+                "<<EjerciciosActualizados>>"
+            )
+
             campos = {
                 "_ent_nombre",
                 "_ent_descripcion",
                 "_ent_duracion",
-                "_ent_calorias",
                 "_cb_tipo",
                 "_cb_intensidad",
             }
@@ -672,12 +680,6 @@ class InterfazGestionEjercicios(InterfazBase):
         )
         self._cb_intensidad.set(intensidad)
 
-        self._ent_calorias.delete(0, tk.END)
-        self._ent_calorias.insert(
-            0,
-            str(ejercicio.calorias_estimadas),
-        )
-
         if "_lbl_modo" in self.__dict__:
             self._lbl_modo.config(
                 text=(
@@ -696,7 +698,6 @@ class InterfazGestionEjercicios(InterfazBase):
         descripcion = self._ent_descripcion.get().strip()
         duracion_texto = self._ent_duracion.get().strip()
         intensidad = self._cb_intensidad.get().strip()
-        calorias_texto = self._ent_calorias.get().strip()
 
         if not nombre:
             raise ValueError(
@@ -723,11 +724,6 @@ class InterfazGestionEjercicios(InterfazBase):
                 "Seleccione la intensidad."
             )
 
-        if not calorias_texto:
-            raise ValueError(
-                "Ingrese las calorías estimadas."
-            )
-
         try:
             duracion = int(duracion_texto)
 
@@ -736,22 +732,9 @@ class InterfazGestionEjercicios(InterfazBase):
                 "La duración debe ser un entero."
             ) from error
 
-        try:
-            calorias = float(calorias_texto)
-
-        except ValueError as error:
-            raise ValueError(
-                "Las calorías deben ser numéricas."
-            ) from error
-
         if duracion <= 0:
             raise ValueError(
                 "La duración debe ser mayor que cero."
-            )
-
-        if calorias <= 0:
-            raise ValueError(
-                "Las calorías deben ser mayores que cero."
             )
 
         return {
@@ -760,14 +743,15 @@ class InterfazGestionEjercicios(InterfazBase):
             "descripcion": descripcion,
             "duracion_minutos": duracion,
             "intensidad": intensidad,
-            "calorias_estimadas": calorias,
         }
+
 
     def _cancelar_edicion(self) -> None:
         """
         Cancela la edición actual.
         """
         self._limpiar_formulario()
+
 
     def _limpiar_formulario(self) -> None:
         """
@@ -777,7 +761,6 @@ class InterfazGestionEjercicios(InterfazBase):
             self._ent_nombre,
             self._ent_descripcion,
             self._ent_duracion,
-            self._ent_calorias,
         ):
             entry.delete(0, tk.END)
 

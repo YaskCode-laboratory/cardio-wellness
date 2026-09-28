@@ -525,3 +525,309 @@ def test_actualizar_contrasenia_rechaza_contrasenia_actual_invalida(
             contrasenia_actual,
             "ClaveNueva456!",
         )
+
+@pytest.mark.parametrize(
+    "contrasenia",
+    [
+        None,
+        "",
+        123,
+        False,
+    ],
+)
+def test_restablecer_contrasenia_rechaza_valor_vacio_o_invalido(
+    recursos,
+    contrasenia,
+):
+    dao, _, _ = recursos
+
+    with pytest.raises(
+        ValueError,
+        match="La nueva contraseña no puede estar vacía",
+    ):
+        dao.restablecer_contrasenia(
+            1,
+            contrasenia,
+        )
+
+
+def test_restablecer_contrasenia_rechaza_contrasenia_debil(
+    recursos,
+):
+    dao, _, _ = recursos
+
+    with patch(
+        "src.persistencia.cliente_dao."
+        "GestorSeguridad.validar_fortaleza_contrasena",
+        return_value=False,
+    ):
+        with pytest.raises(
+            ValueError,
+            match="La nueva contraseña es muy débil",
+        ):
+            dao.restablecer_contrasenia(
+                1,
+                "ClaveDebil",
+            )
+
+
+def test_restablecer_contrasenia_lanza_error_si_cliente_no_existe(
+    recursos,
+):
+    dao, cursor, conexion = recursos
+    cursor.fetchone.return_value = None
+
+    with patch(
+        "src.persistencia.cliente_dao."
+        "GestorSeguridad.validar_fortaleza_contrasena",
+        return_value=True,
+    ), patch(
+        "src.persistencia.cliente_dao."
+        "GestorSeguridad.generar_hash",
+        return_value=GestorSeguridad.generar_hash(
+            "NuevaClave123!"
+        ),
+    ):
+        with pytest.raises(
+            ValueError,
+            match="No se encontró el cliente con ID 1",
+        ):
+            dao.restablecer_contrasenia(
+                1,
+                "NuevaClave123!",
+            )
+
+    conexion.rollback.assert_called_once()
+    conexion.commit.assert_not_called()
+
+
+def test_restablecer_contrasenia_rechaza_hash_no_verificable(
+    recursos,
+):
+    dao, cursor, conexion = recursos
+
+    hash_generado = GestorSeguridad.generar_hash(
+        "NuevaClave123!"
+    )
+
+    cursor.fetchone.return_value = (
+        1,
+        "cliente@example.com",
+        hash_generado,
+    )
+
+    with patch(
+        "src.persistencia.cliente_dao."
+        "GestorSeguridad.validar_fortaleza_contrasena",
+        return_value=True,
+    ), patch(
+        "src.persistencia.cliente_dao."
+        "GestorSeguridad.generar_hash",
+        return_value=hash_generado,
+    ), patch(
+        "src.persistencia.cliente_dao."
+        "GestorSeguridad.verificar_contrasenia",
+        return_value=False,
+    ):
+        with pytest.raises(
+            RuntimeError,
+            match=(
+                "No se pudo confirmar el hash "
+                "actualizado del cliente"
+            ),
+        ):
+            dao.restablecer_contrasenia(
+                1,
+                "NuevaClave123!",
+            )
+
+    conexion.rollback.assert_called_once()
+    conexion.commit.assert_not_called()
+
+
+def test_restablecer_contrasenia_actualiza_y_confirma(
+    recursos,
+):
+    dao, cursor, conexion = recursos
+
+    nueva_contrasenia = "NuevaClave123!"
+    hash_generado = GestorSeguridad.generar_hash(
+        nueva_contrasenia
+    )
+
+    cursor.fetchone.return_value = (
+        1,
+        "cliente@example.com",
+        hash_generado,
+    )
+
+    with patch(
+        "src.persistencia.cliente_dao."
+        "GestorSeguridad.validar_fortaleza_contrasena",
+        return_value=True,
+    ) as mock_fortaleza, patch(
+        "src.persistencia.cliente_dao."
+        "GestorSeguridad.generar_hash",
+        return_value=hash_generado,
+    ) as mock_generar, patch(
+        "src.persistencia.cliente_dao."
+        "GestorSeguridad.verificar_contrasenia",
+        return_value=True,
+    ) as mock_verificar:
+        resultado = dao.restablecer_contrasenia(
+            1,
+            nueva_contrasenia,
+        )
+
+    assert resultado is True
+
+    mock_fortaleza.assert_called_once_with(
+        nueva_contrasenia
+    )
+
+    mock_generar.assert_called_once_with(
+        nueva_contrasenia
+    )
+
+    mock_verificar.assert_called_once_with(
+        nueva_contrasenia,
+        hash_generado,
+    )
+
+    cursor.execute.assert_called_once()
+
+    sql, parametros = cursor.execute.call_args.args
+
+    assert "UPDATE usuarios" in sql
+    assert "RETURNING" in sql
+
+    assert parametros == (
+        hash_generado,
+        1,
+    )
+
+    conexion.commit.assert_called_once()
+    conexion.rollback.assert_not_called()
+
+
+def test_restablecer_contrasenia_hace_rollback_ante_error_sql(
+    recursos,
+):
+    dao, cursor, conexion = recursos
+
+    cursor.execute.side_effect = RuntimeError(
+        "Fallo de base de datos"
+    )
+
+    hash_generado = GestorSeguridad.generar_hash(
+        "NuevaClave123!"
+    )
+
+    with patch(
+        "src.persistencia.cliente_dao."
+        "GestorSeguridad.validar_fortaleza_contrasena",
+        return_value=True,
+    ), patch(
+        "src.persistencia.cliente_dao."
+        "GestorSeguridad.generar_hash",
+        return_value=hash_generado,
+    ):
+        with pytest.raises(
+            RuntimeError,
+            match="Fallo de base de datos",
+        ):
+            dao.restablecer_contrasenia(
+                1,
+                "NuevaClave123!",
+            )
+
+    conexion.rollback.assert_called_once()
+    conexion.commit.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "id_usuario",
+    [
+        None,
+        True,
+        False,
+        0,
+        -1,
+        "1",
+    ],
+)
+def test_restablecer_contrasenia_valida_id(
+    recursos,
+    id_usuario,
+):
+    dao, _, _ = recursos
+
+    with pytest.raises(
+        ValueError,
+        match="El ID de usuario debe ser un entero positivo",
+    ):
+        dao.restablecer_contrasenia(
+            id_usuario,
+            "NuevaClave123!",
+        )
+
+def test_listar_retorna_clientes_desde_filas(
+    recursos,
+):
+    dao, cursor, conexion = recursos
+
+    fila_1 = crear_fila_cliente(
+        peso_objetivo=64.0,
+        genero="MUJER",
+    )
+
+    fila_2 = list(
+        crear_fila_cliente(
+            peso_objetivo=70.0,
+            genero="HOMBRE",
+        )
+    )
+
+    fila_2[0] = 2
+    fila_2[1] = "Carlos"
+    fila_2[2] = "Lopez"
+    fila_2[3] = "carlos@example.com"
+    fila_2 = tuple(fila_2)
+
+    cursor.fetchall.return_value = [
+        fila_1,
+        fila_2,
+    ]
+
+    resultado = dao.listar()
+
+    assert len(resultado) == 2
+
+    assert all(
+        isinstance(cliente, Cliente)
+        for cliente in resultado
+    )
+
+    assert resultado[0].id_usuario == 1
+    assert resultado[0].nombre == "Laura"
+    assert resultado[0].genero == "MUJER"
+
+    assert resultado[1].id_usuario == 2
+    assert resultado[1].nombre == "Carlos"
+    assert resultado[1].apellido == "Lopez"
+    assert resultado[1].correo_electronico == (
+        "carlos@example.com"
+    )
+    assert resultado[1].genero == "HOMBRE"
+
+    cursor.execute.assert_called_once()
+    cursor.fetchall.assert_called_once()
+
+    sql = cursor.execute.call_args.args[0]
+
+    assert "SELECT" in sql
+    assert "FROM usuarios AS u" in sql
+    assert "JOIN clientes AS c" in sql
+    assert "ORDER BY u.id_usuario" in sql
+
+    conexion.rollback.assert_not_called()

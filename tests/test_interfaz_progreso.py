@@ -1094,10 +1094,12 @@ class TestInterfazProgreso:
         interfaz,
     ):
         """
-        Prueba meta alcanzada de reducción de peso.
+        Prueba meta alcanzada cuando el peso actual llega
+        al peso objetivo real del cliente.
         """
         interfaz._cliente.objetivo = "Bajar de peso"
-        interfaz._cliente.peso = 70
+        interfaz._cliente.peso_objetivo = 65
+        interfaz._cliente.peso = 65
 
         interfaz._evaluar_meta(
             {
@@ -1106,16 +1108,18 @@ class TestInterfazProgreso:
         )
 
         interfaz._lbl_meta.config.assert_called_once_with(
-            text="META ALCANZADA! Peso: 70.0 kg",
+            text="META ALCANZADA! Peso: 65.0 kg",
             foreground="green",
         )
+
 
     def test_evaluar_meta_bajar_peso_no_alcanzada(
         self,
         interfaz,
     ):
         """
-        Prueba meta no alcanzada de reducción de peso.
+        Prueba meta no alcanzada cuando el peso actual
+        es mayor al peso objetivo real.
         """
         interfaz._cliente.objetivo = "Perder peso"
         interfaz._cliente.peso = 80
@@ -1131,6 +1135,33 @@ class TestInterfazProgreso:
             text=(
                 "Meta no alcanzada. Peso: 80.0 kg "
                 "(Meta: 75 kg)"
+            ),
+            foreground="red",
+        )
+
+
+    def test_evaluar_meta_bajar_peso_no_usa_meta_fija_de_70kg(
+        self,
+        interfaz,
+    ):
+        """
+        Un cliente con peso menor de 70 kg no alcanza la
+        meta si su peso objetivo real es todavía menor.
+        """
+        interfaz._cliente.objetivo = "Bajar de peso"
+        interfaz._cliente.peso_objetivo = 60
+        interfaz._cliente.peso = 69
+
+        interfaz._evaluar_meta(
+            {
+                "total_sesiones": 2,
+            }
+        )
+
+        interfaz._lbl_meta.config.assert_called_once_with(
+            text=(
+                "Meta no alcanzada. Peso: 69.0 kg "
+                "(Meta: 60 kg)"
             ),
             foreground="red",
         )

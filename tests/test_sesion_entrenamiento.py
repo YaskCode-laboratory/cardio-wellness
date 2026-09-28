@@ -537,3 +537,34 @@ def test_porcentaje_cumplimiento_con_planificadas_cero(
     sesion._veces_realizadas = 0
 
     assert sesion.porcentaje_cumplimiento == 0.0
+
+@pytest.mark.parametrize(
+    "atributo, valor, mensaje",
+    [
+        (
+            "id_asignacion",
+            True,
+            "El ID de asignación debe ser un entero positivo",
+        ),
+        (
+            "id_asignacion_ejercicio",
+            0,
+            "El ID del ejercicio asignado debe ser un entero positivo",
+        ),
+    ],
+)
+def test_ids_asignacion_invalidos(
+    sesion,
+    atributo,
+    valor,
+    mensaje,
+):
+    with pytest.raises(
+        ValueError,
+        match=mensaje,
+    ):
+        setattr(
+            sesion,
+            atributo,
+            valor,
+        )

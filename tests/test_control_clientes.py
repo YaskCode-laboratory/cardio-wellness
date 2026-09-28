@@ -1119,3 +1119,198 @@ def test_validar_datos_registro_usa_peso_como_meta_por_defecto():
     )
 
     assert resultado is None
+
+@pytest.mark.parametrize(
+    "id_usuario",
+    [
+        None,
+        True,
+        False,
+        0,
+        -1,
+        "10",
+        10.5,
+    ],
+)
+def test_restablecer_contrasenia_cliente_rechaza_id_invalido(
+    controlador,
+    id_usuario,
+):
+    """
+    Verifica que el ID del cliente sea válido antes de
+    intentar restablecer su contraseña.
+    """
+    with pytest.raises(
+        ValueError,
+        match="id de usuario",
+    ):
+        controlador.restablecer_contrasenia_cliente(
+            id_usuario,
+            "NuevaClave123!",
+        )
+
+@pytest.mark.parametrize(
+    "nueva_contrasenia",
+    [
+        "",
+        None,
+        123,
+        [],
+    ],
+)
+def test_restablecer_contrasenia_cliente_rechaza_contrasenia_vacia(
+    controlador,
+    nueva_contrasenia,
+):
+    """
+    Verifica que la nueva contraseña sea obligatoria.
+    """
+    with pytest.raises(
+        ValueError,
+        match="nueva contraseña",
+    ):
+        controlador.restablecer_contrasenia_cliente(
+            10,
+            nueva_contrasenia,
+        )
+
+def test_restablecer_contrasenia_cliente_rechaza_contrasenia_debil(
+    controlador,
+):
+    """
+    Verifica que se rechace una contraseña que no cumple
+    las reglas de fortaleza de seguridad.
+    """
+    with patch(
+        "src.controladores.control_clientes."
+        "GestorSeguridad.validar_fortaleza_contrasena",
+        return_value=False,
+    ) as mock_fortaleza:
+        with pytest.raises(
+            ValueError,
+            match="muy débil",
+        ):
+            controlador.restablecer_contrasenia_cliente(
+                10,
+                "debil",
+            )
+
+    mock_fortaleza.assert_called_once_with("debil")
+
+def test_restablecer_contrasenia_cliente_rechaza_cliente_inexistente(
+    controlador,
+    mock_cliente_dao,
+):
+    """
+    Verifica que no se actualice la contraseña si el
+    cliente solicitado no existe.
+    """
+    mock_cliente_dao.buscar_por_id.return_value = None
+
+    with patch(
+        "src.controladores.control_clientes."
+        "GestorSeguridad.validar_fortaleza_contrasena",
+        return_value=True,
+    ):
+        with pytest.raises(
+            ValueError,
+            match="No se encontró el cliente",
+        ):
+            controlador.restablecer_contrasenia_cliente(
+                10,
+                "NuevaClave123!",
+            )
+
+    mock_cliente_dao.buscar_por_id.assert_called_once_with(10)
+
+    mock_cliente_dao.restablecer_contrasenia.assert_not_called()
+
+@pytest.mark.parametrize(
+    "resultado_dao",
+    [
+        False,
+        None,
+        0,
+        "actualizado",
+    ],
+)
+def test_restablecer_contrasenia_cliente_falla_si_dao_no_confirma(
+    controlador,
+    mock_cliente_dao,
+    resultado_dao,
+):
+    """
+    Verifica que el controlador lance RuntimeError cuando
+    el DAO no devuelve exactamente True.
+    """
+    mock_cliente_dao.buscar_por_id.return_value = Mock()
+
+    mock_cliente_dao.restablecer_contrasenia.return_value = (
+        resultado_dao
+    )
+
+    with patch(
+        "src.controladores.control_clientes."
+        "GestorSeguridad.validar_fortaleza_contrasena",
+        return_value=True,
+    ):
+        with pytest.raises(
+            RuntimeError,
+            match="no pudo confirmar",
+        ):
+            controlador.restablecer_contrasenia_cliente(
+                10,
+                "NuevaClave123!",
+            )
+
+    mock_cliente_dao.buscar_por_id.assert_called_once_with(10)
+
+    mock_cliente_dao.restablecer_contrasenia.assert_called_once_with(
+        10,
+        "NuevaClave123!",
+    )
+
+def test_restablecer_contrasenia_cliente_exitoso_registra_log(
+    controlador,
+    mock_cliente_dao,
+):
+    """
+    Verifica que el restablecimiento exitoso actualice
+    la contraseña y registre la auditoría correspondiente.
+    """
+    mock_cliente_dao.buscar_por_id.return_value = Mock()
+
+    mock_cliente_dao.restablecer_contrasenia.return_value = (
+        True
+    )
+
+    with patch(
+        "src.controladores.control_clientes."
+        "GestorSeguridad.validar_fortaleza_contrasena",
+        return_value=True,
+    ) as mock_fortaleza, patch.object(
+        controlador,
+        "_registrar_log",
+    ) as mock_log:
+        resultado = controlador.restablecer_contrasenia_cliente(
+            10,
+            "NuevaClave123!",
+        )
+
+    assert resultado is True
+
+    mock_fortaleza.assert_called_once_with(
+        "NuevaClave123!"
+    )
+
+    mock_cliente_dao.buscar_por_id.assert_called_once_with(10)
+
+    mock_cliente_dao.restablecer_contrasenia.assert_called_once_with(
+        10,
+        "NuevaClave123!",
+    )
+
+    mock_log.assert_called_once_with(
+        "CLIENTE_10",
+        "RESTABLECIMIENTO_CONTRASENIA",
+    )

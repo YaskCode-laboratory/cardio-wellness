@@ -2645,3 +2645,361 @@ class TestInterfazGestionRutinas:
         resultado = interfaz._obtener_id_rutina_tabla()
 
         assert resultado is None
+
+    def test_constructor_enlaza_evento_actualizacion_ejercicios(
+        self,
+        control_rutinas,
+    ):
+        master = MagicMock()
+        control_ejercicios = MagicMock()
+        ventana = MagicMock()
+
+        def inicializar_base(instancia, *args, **kwargs):
+            instancia.tk = MagicMock()
+
+        with patch(
+            "src.interfaz.interfaz_gestion_rutinas."
+            "InterfazBase.__init__",
+            new=inicializar_base,
+        ), patch.object(
+            InterfazGestionRutinas,
+            "pack",
+        ), patch.object(
+            InterfazGestionRutinas,
+            "mostrarFormularioRutina",
+        ), patch.object(
+            InterfazGestionRutinas,
+            "mostrarRutinas",
+        ), patch.object(
+            InterfazGestionRutinas,
+            "mostrarEjerciciosRutina",
+        ), patch.object(
+            InterfazGestionRutinas,
+            "_cargar_datos_ejercicios",
+        ), patch.object(
+            InterfazGestionRutinas,
+            "winfo_toplevel",
+            return_value=ventana,
+        ):
+            interfaz = InterfazGestionRutinas(
+                master=master,
+                control_rutinas=control_rutinas,
+                control_ejercicios=control_ejercicios,
+            )
+
+        assert "tk" in interfaz.__dict__
+        assert interfaz._control_ejercicios is control_ejercicios
+
+        ventana.bind.assert_called_once_with(
+            "<<EjerciciosActualizados>>",
+            interfaz._actualizar_ejercicios_disponibles,
+            add="+",
+        )
+
+    def test_preparar_edicion_rutina_sin_seleccion_muestra_error(
+        self,
+        interfaz,
+    ):
+        interfaz._tree = TreeviewFalso()
+
+        with patch.object(
+            interfaz,
+            "mostrar_error",
+        ) as mock_error:
+            interfaz.preparar_edicion_rutina()
+
+        mock_error.assert_called_once_with(
+            "Seleccione una rutina para editar."
+        )
+
+    def test_preparar_edicion_rutina_en_modo_prueba_guarda_id(
+        self,
+        interfaz,
+    ):
+        interfaz._tree = TreeviewFalso()
+        interfaz._tree.seleccion_actual = ["fila-1"]
+        interfaz._tree.items = {
+            "fila-1": {
+                "values": (7, "Rutina cardio"),
+            },
+        }
+
+        interfaz.preparar_edicion_rutina()
+
+        assert interfaz._id_rutina_editando == 7
+
+    def test_preparar_edicion_rutina_en_produccion_carga_campos(
+        self,
+        interfaz,
+        control_rutinas,
+        widgets_formulario,
+        rutina,
+    ):
+        interfaz.tk = MagicMock()
+
+        self.asignar_widgets_formulario(
+            interfaz,
+            widgets_formulario,
+        )
+
+        interfaz._lbl_modo = LabelFalso()
+
+        interfaz._tree = TreeviewFalso()
+        interfaz._tree.seleccion_actual = ["fila-1"]
+        interfaz._tree.items = {
+            "fila-1": {
+                "values": (1, "Rutina inicial"),
+            },
+        }
+
+        control_rutinas.buscar_por_id.return_value = rutina
+
+        interfaz.preparar_edicion_rutina()
+
+        control_rutinas.buscar_por_id.assert_called_once_with(1)
+
+        assert interfaz._id_rutina_editando == 1
+        assert widgets_formulario["nombre"].valor == (
+            "Rutina inicial"
+        )
+        assert widgets_formulario["descripcion"].valor == (
+            "Rutina de inicio"
+        )
+        assert widgets_formulario["objetivo"].valor == (
+            "Mejorar resistencia"
+        )
+        assert widgets_formulario["nivel"].valor == "BASICO"
+        assert widgets_formulario["duracion"].valor == "8"
+
+        assert interfaz._lbl_modo.configuracion == {
+            "text": "Modo: editando datos de rutina #1",
+            "foreground": "#174ea6",
+        }
+
+    def test_preparar_edicion_rutina_muestra_error_si_no_existe(
+        self,
+        interfaz,
+        control_rutinas,
+        widgets_formulario,
+    ):
+        interfaz.tk = MagicMock()
+
+        self.asignar_widgets_formulario(
+            interfaz,
+            widgets_formulario,
+        )
+
+        interfaz._tree = TreeviewFalso()
+        interfaz._tree.seleccion_actual = ["fila-1"]
+        interfaz._tree.items = {
+            "fila-1": {
+                "values": (5, "Rutina inexistente"),
+            },
+        }
+
+        control_rutinas.buscar_por_id.return_value = None
+
+        with patch.object(
+            interfaz,
+            "mostrar_error",
+        ) as mock_error:
+            interfaz.preparar_edicion_rutina()
+
+        mock_error.assert_called_once_with(
+            "No se pudo cargar la rutina 5: "
+            "No se encontró la rutina."
+        )
+
+    def test_editar_rutina_en_modo_prueba_muestra_mensaje_pendiente(
+        self,
+        interfaz,
+    ):
+        interfaz._id_rutina_editando = 4
+
+        with patch.object(
+            interfaz,
+            "mostrar_mensaje",
+        ) as mock_mensaje:
+            interfaz.editarRutina()
+
+        mock_mensaje.assert_called_once_with(
+            "Funcionalidad de edicion "
+            "pendiente de implementar."
+        )
+
+    def test_gestionar_ejercicios_sin_rutina_muestra_error(
+        self,
+        interfaz,
+    ):
+        interfaz._tree = TreeviewFalso()
+
+        with patch.object(
+            interfaz,
+            "mostrar_error",
+        ) as mock_error:
+            interfaz.gestionar_ejercicios_rutina()
+
+        mock_error.assert_called_once_with(
+            "Seleccione una rutina para gestionar "
+            "sus ejercicios."
+        )
+
+    def test_gestionar_ejercicios_oculta_tabla_y_muestra_panel(
+        self,
+        interfaz,
+    ):
+        interfaz._tree = TreeviewFalso()
+        interfaz._tree.seleccion_actual = ["fila-1"]
+        interfaz._tree.items = {
+            "fila-1": {
+                "values": (8, "Rutina fuerza"),
+            },
+        }
+
+        interfaz._tree_frame = FrameFalso()
+
+        with patch.object(
+            interfaz,
+            "_mostrar_panel_ejercicios",
+        ) as mock_mostrar_panel:
+            interfaz.gestionar_ejercicios_rutina()
+
+        assert interfaz._tree_frame.pack_ocultado is True
+
+        mock_mostrar_panel.assert_called_once_with(
+            8,
+            permitir_gestion=True,
+        )
+
+    def test_gestionar_ejercicios_muestra_error_ante_fallo(
+        self,
+        interfaz,
+    ):
+        interfaz._tree = TreeviewFalso()
+        interfaz._tree.seleccion_actual = ["fila-1"]
+        interfaz._tree.items = {
+            "fila-1": {
+                "values": (8, "Rutina fuerza"),
+            },
+        }
+
+        interfaz._tree_frame = FrameFalso()
+
+        with patch.object(
+            interfaz,
+            "_mostrar_panel_ejercicios",
+            side_effect=RuntimeError("Fallo del panel"),
+        ), patch.object(
+            interfaz,
+            "mostrar_error",
+        ) as mock_error:
+            interfaz.gestionar_ejercicios_rutina()
+
+        mock_error.assert_called_once_with(
+            "No se pudieron gestionar los ejercicios: "
+            "Fallo del panel"
+        )
+
+    @pytest.mark.parametrize(
+        "permitir_gestion, texto_esperado, ocultar_controles",
+        [
+            (
+                True,
+                "Gestionar ejercicios de la rutina global",
+                False,
+            ),
+            (
+                False,
+                "Ejercicios registrados en la rutina global",
+                True,
+            ),
+        ],
+    )
+    def test_mostrar_panel_ejercicios_configura_modo(
+        self,
+        interfaz,
+        control_rutinas,
+        rutina,
+        permitir_gestion,
+        texto_esperado,
+        ocultar_controles,
+    ):
+        interfaz._frame_ejercicios_rutina = LabelFrameFalso()
+        interfaz._frame_controles_ejercicios = FrameFalso()
+        interfaz._cb_rutina_ejercicios = ComboboxFalso()
+
+        control_rutinas.buscar_por_id.return_value = rutina
+
+        with patch.object(
+            interfaz,
+            "_mostrar_ejercicios_asociados",
+        ) as mock_mostrar_asociados:
+            interfaz._mostrar_panel_ejercicios(
+                1,
+                permitir_gestion=permitir_gestion,
+            )
+
+        assert interfaz._id_rutina_vista_previa == 1
+        assert interfaz._id_ejercicio_seleccionado is None
+
+        assert interfaz._cb_rutina_ejercicios.valor == (
+            "1 - Rutina inicial"
+        )
+
+        assert (
+            interfaz._frame_ejercicios_rutina.configuracion["text"]
+            == texto_esperado
+        )
+
+        assert (
+            interfaz._frame_controles_ejercicios.pack_ocultado
+            is ocultar_controles
+        )
+
+        mock_mostrar_asociados.assert_called_once_with(1)
+
+    def test_mostrar_panel_ejercicios_lanza_error_si_rutina_no_existe(
+        self,
+        interfaz,
+        control_rutinas,
+    ):
+        control_rutinas.buscar_por_id.return_value = None
+
+        with pytest.raises(
+            ValueError,
+            match="No se encontró la rutina.",
+        ):
+            interfaz._mostrar_panel_ejercicios(
+                99,
+                permitir_gestion=True,
+            )
+
+    def test_actualizar_ejercicios_disponibles_sin_control_no_hace_nada(
+        self,
+        interfaz,
+    ):
+        interfaz._control_ejercicios = None
+        interfaz._cb_ejercicio_rutina = ComboboxFalso()
+
+        interfaz._cargar_datos_ejercicios = MagicMock()
+
+        interfaz._actualizar_ejercicios_disponibles()
+
+        assert interfaz._cb_ejercicio_rutina.valor == ""
+        interfaz._cargar_datos_ejercicios.assert_not_called()
+
+    def test_actualizar_ejercicios_disponibles_limpia_combo_y_recarga(
+        self,
+        interfaz,
+    ):
+        interfaz._control_ejercicios = MagicMock()
+        interfaz._cb_ejercicio_rutina = ComboboxFalso()
+        interfaz._cb_ejercicio_rutina.valor = "9 - Bicicleta"
+
+        interfaz._cargar_datos_ejercicios = MagicMock()
+
+        interfaz._actualizar_ejercicios_disponibles()
+
+        assert interfaz._cb_ejercicio_rutina.valor == ""
+
+        interfaz._cargar_datos_ejercicios.assert_called_once_with()

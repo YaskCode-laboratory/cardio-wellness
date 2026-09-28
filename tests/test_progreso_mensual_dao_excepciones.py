@@ -4,6 +4,8 @@ Tests para cubrir excepciones y casos edge en ProgresoMensualDAO.
 
 import pytest
 from datetime import date
+from decimal import Decimal
+from unittest.mock import MagicMock
 from uuid import uuid4
 
 from src.modelos.progreso_mensual import ProgresoMensual
@@ -161,3 +163,150 @@ def test_dao_buscar_cliente_sin_progreso(dao, datos_prueba):
     resultado = dao.buscar_por_cliente(datos_prueba["id_cliente"])
     assert isinstance(resultado, list)
     assert len(resultado) == 0
+
+def test_dao_buscar_por_cliente_y_mes_exitoso_normaliza_mes(
+    dao,
+    datos_prueba,
+):
+    progreso = ProgresoMensual(
+        id_progreso=None,
+        id_cliente=datos_prueba["id_cliente"],
+        mes=date(2026, 10, 18),
+        peso=71.25,
+        sesiones_completadas=6,
+        sesiones_planificadas=10,
+        porcentaje_cumplimiento=60.0,
+    )
+
+    guardado = dao.guardar(progreso)
+
+    encontrado = dao.buscar_por_cliente_y_mes(
+        datos_prueba["id_cliente"],
+        date(2026, 10, 29),
+    )
+
+    assert encontrado is not None
+    assert encontrado.id_progreso == guardado.id_progreso
+    assert encontrado.id_cliente == datos_prueba["id_cliente"]
+    assert encontrado.mes == date(2026, 10, 1)
+    assert encontrado.peso == Decimal("71.25")
+    assert encontrado.sesiones_completadas == 6
+    assert encontrado.sesiones_planificadas == 10
+    assert encontrado.porcentaje_cumplimiento == 60.0
+
+def test_dao_buscar_por_cliente_y_mes_exitoso_normaliza_mes(
+    dao,
+    datos_prueba,
+):
+    progreso = ProgresoMensual(
+        id_progreso=None,
+        id_cliente=datos_prueba["id_cliente"],
+        mes=date(2026, 10, 18),
+        peso=71.25,
+        sesiones_completadas=6,
+        sesiones_planificadas=10,
+        porcentaje_cumplimiento=60.0,
+    )
+
+    guardado = dao.guardar(progreso)
+
+    encontrado = dao.buscar_por_cliente_y_mes(
+        datos_prueba["id_cliente"],
+        date(2026, 10, 29),
+    )
+
+    assert encontrado is not None
+    assert encontrado.id_progreso == guardado.id_progreso
+    assert encontrado.id_cliente == datos_prueba["id_cliente"]
+    assert encontrado.mes == date(2026, 10, 1)
+    assert encontrado.peso == Decimal("71.25")
+    assert encontrado.sesiones_completadas == 6
+    assert encontrado.sesiones_planificadas == 10
+    assert encontrado.porcentaje_cumplimiento == 60.0
+
+
+def test_dao_buscar_por_cliente_y_mes_inexistente_retorna_none(
+    dao,
+    datos_prueba,
+):
+    resultado = dao.buscar_por_cliente_y_mes(
+        datos_prueba["id_cliente"],
+        date(2026, 11, 15),
+    )
+
+    assert resultado is None
+
+
+@pytest.mark.parametrize(
+    "id_cliente, mes, mensaje",
+    [
+        (
+            0,
+            date(2026, 10, 1),
+            "El ID del cliente debe ser positivo",
+        ),
+        (
+            -1,
+            date(2026, 10, 1),
+            "El ID del cliente debe ser positivo",
+        ),
+        (
+            True,
+            date(2026, 10, 1),
+            "El ID del cliente debe ser positivo",
+        ),
+        (
+            1,
+            "2026-10-01",
+            "El mes debe ser una fecha válida",
+        ),
+    ],
+)
+def test_dao_buscar_por_cliente_y_mes_valida_datos(
+    dao,
+    id_cliente,
+    mes,
+    mensaje,
+):
+    with pytest.raises(ValueError, match=mensaje):
+        dao.buscar_por_cliente_y_mes(
+            id_cliente,
+            mes,
+        )
+
+def test_dao_buscar_por_cliente_y_mes_relanza_error(
+    dao,
+    monkeypatch,
+):
+    cursor = MagicMock()
+    cursor.__enter__.return_value = cursor
+    cursor.__exit__.return_value = False
+    cursor.execute.side_effect = RuntimeError(
+        "fallo al buscar progreso por cliente y mes",
+    )
+
+    conexion = MagicMock()
+    conexion.cursor.return_value = cursor
+
+    monkeypatch.setattr(
+        dao._bd,
+        "_conexion",
+        conexion,
+    )
+
+    monkeypatch.setattr(
+        dao._bd,
+        "abrir_conexion",
+        MagicMock(),
+    )
+
+    with pytest.raises(
+        RuntimeError,
+        match="fallo al buscar progreso por cliente y mes",
+    ):
+        dao.buscar_por_cliente_y_mes(
+            10,
+            date(2026, 10, 1),
+        )
+
+    cursor.execute.assert_called_once()

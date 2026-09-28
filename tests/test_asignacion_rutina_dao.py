@@ -966,3 +966,102 @@ def test_listar_por_cliente_relanza_error_del_cursor(
         match="fallo al listar historial",
     ):
         dao.listar_por_cliente(1)
+
+@pytest.mark.parametrize(
+    "id_asignacion",
+    [
+        None,
+        True,
+        False,
+        0,
+        -1,
+        "10",
+        10.5,
+    ],
+)
+def test_cancelar_asignacion_rechaza_id_invalido(
+    dao,
+    id_asignacion,
+):
+    """
+    Verifica que cancelar_asignacion rechace IDs que no
+    sean enteros positivos.
+    """
+    with pytest.raises(ValueError):
+        dao.cancelar_asignacion(id_asignacion)
+
+    dao._bd.abrir_conexion.assert_not_called()
+
+@pytest.mark.parametrize(
+    ("rowcount", "esperado"),
+    [
+        (1, True),
+        (0, False),
+    ],
+)
+def test_cancelar_asignacion_retorna_resultado_segun_rowcount(
+    dao,
+    rowcount,
+    esperado,
+):
+    """
+    Verifica que cancelar_asignacion devuelva True si
+    canceló una asignación activa y False si no encontró
+    una asignación activa para actualizar.
+    """
+    cursor = crear_cursor(
+        rowcount=rowcount,
+    )
+
+    configurar_cursor(
+        dao,
+        cursor,
+    )
+
+    resultado = dao.cancelar_asignacion(22)
+
+    assert resultado is esperado
+
+    dao._bd.abrir_conexion.assert_called_once_with()
+
+    cursor.execute.assert_called_once()
+
+    parametros = cursor.execute.call_args.args[1]
+
+    assert parametros[0] == EstadoAsignacion.CANCELADA.value
+    assert parametros[2] == 22
+    assert parametros[3] == EstadoAsignacion.ACTIVA.value
+
+    dao._bd._conexion.commit.assert_called_once_with()
+
+    dao._bd._conexion.rollback.assert_not_called()
+
+def test_cancelar_asignacion_hace_rollback_en_error(
+    dao,
+):
+    """
+    Verifica que cancelar_asignacion haga rollback y
+    relance el error si falla la consulta SQL.
+    """
+    cursor = crear_cursor()
+
+    cursor.execute.side_effect = RuntimeError(
+        "fallo al cancelar asignación",
+    )
+
+    configurar_cursor(
+        dao,
+        cursor,
+    )
+
+    with pytest.raises(
+        RuntimeError,
+        match="fallo al cancelar",
+    ):
+        dao.cancelar_asignacion(22)
+
+    dao._bd.abrir_conexion.assert_called_once_with()
+
+    dao._bd._conexion.rollback.assert_called_once_with()
+
+    dao._bd._conexion.commit.assert_not_called()

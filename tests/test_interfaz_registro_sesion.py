@@ -600,3 +600,261 @@ class TestInterfazRegistroSesion:
         )
         assert interfaz._cb_intensidad.get() == ""
         assert interfaz._ent_observaciones.get() == ""
+
+    def test_constructor_inicializa_atributos_y_carga_rutina(
+        self,
+        control_sesiones,
+    ):
+        master = MagicMock()
+
+        with patch(
+            "src.interfaz.interfaz_registro_sesion."
+            "InterfazBase.__init__",
+            return_value=None,
+        ) as mock_base_init, patch.object(
+            InterfazRegistroSesion,
+            "pack",
+        ) as mock_pack, patch.object(
+            InterfazRegistroSesion,
+            "mostrarFormularioSesion",
+        ) as mock_formulario, patch.object(
+            InterfazRegistroSesion,
+            "_cargar_rutina_activa",
+        ) as mock_cargar_rutina:
+            interfaz = InterfazRegistroSesion(
+                master=master,
+                control_sesiones=control_sesiones,
+                id_cliente=10,
+                id_rutina=25,
+            )
+
+        mock_base_init.assert_called_once_with(
+            master,
+            controlador=control_sesiones,
+            padding=10,
+        )
+
+        mock_pack.assert_called_once_with(
+            fill="both",
+            expand=True,
+        )
+
+        mock_formulario.assert_called_once_with()
+        mock_cargar_rutina.assert_called_once_with()
+
+        assert interfaz._id_cliente == 10
+        assert interfaz._id_rutina == 25
+        assert interfaz._id_asignacion is None
+        assert interfaz._ejercicios_asignados == []
+        assert interfaz._ejercicio_asignado_actual is None
+
+    def test_seleccionar_ejercicio_sin_valor_limpia_datos(
+        self,
+        interfaz,
+    ):
+        interfaz._ejercicio_asignado_actual = (
+            self.crear_ejercicio_asignado()
+        )
+
+        with patch.object(
+            interfaz,
+            "_limpiar_datos_ejercicio",
+        ) as mock_limpiar:
+            interfaz._seleccionar_ejercicio()
+
+        assert interfaz._ejercicio_asignado_actual is None
+        mock_limpiar.assert_called_once_with()
+
+    @pytest.mark.parametrize(
+        "valor",
+        [
+            "sin identificador",
+            "- Caminata",
+            "abc - Caminata",
+        ],
+    )
+    def test_seleccionar_ejercicio_con_valor_invalido_limpia_datos(
+        self,
+        interfaz,
+        valor,
+    ):
+        interfaz._cb_ejercicio.set(valor)
+        interfaz._ejercicio_asignado_actual = (
+            self.crear_ejercicio_asignado()
+        )
+
+        with patch.object(
+            interfaz,
+            "_limpiar_datos_ejercicio",
+        ) as mock_limpiar:
+            interfaz._seleccionar_ejercicio()
+
+        assert interfaz._ejercicio_asignado_actual is None
+        mock_limpiar.assert_called_once_with()
+
+    def test_seleccionar_ejercicio_no_encontrado_limpia_datos(
+        self,
+        interfaz,
+    ):
+        interfaz._ejercicios_asignados = [
+            self.crear_ejercicio_asignado(
+                id_asignacion_ejercicio=501,
+            ),
+        ]
+
+        interfaz._cb_ejercicio.set("999 - Ejercicio inexistente")
+
+        with patch.object(
+            interfaz,
+            "_limpiar_datos_ejercicio",
+        ) as mock_limpiar:
+            interfaz._seleccionar_ejercicio()
+
+        assert interfaz._ejercicio_asignado_actual is None
+        mock_limpiar.assert_called_once_with()
+
+    def test_seleccionar_ejercicio_con_meta_completada(
+        self,
+        interfaz,
+    ):
+        ejercicio = self.crear_ejercicio_asignado(
+            id_asignacion_ejercicio=501,
+            nombre="Caminata",
+            planificadas=5,
+            realizadas=5,
+        )
+
+        interfaz._ejercicios_asignados = [ejercicio]
+        interfaz._cb_ejercicio.set("501 - Caminata")
+
+        interfaz._seleccionar_ejercicio()
+
+        assert (
+            interfaz._ejercicio_asignado_actual
+            is ejercicio
+        )
+
+        assert (
+            interfaz._lbl_meta_total.configuracion["text"]
+            == "5"
+        )
+
+        assert (
+            interfaz._lbl_veces_realizadas.configuracion["text"]
+            == "5"
+        )
+
+        assert (
+            interfaz._lbl_veces_restantes.configuracion["text"]
+            == "0"
+        )
+
+        assert interfaz._ent_veces_realizadas.get() == ""
+
+        assert interfaz._lbl_mensaje.configuracion == {
+            "text": (
+                "Este ejercicio ya alcanzó su meta. "
+                "Seleccione otro ejercicio."
+            ),
+            "foreground": "#1b5e20",
+        }
+
+    def test_registrar_sesion_muestra_estado_completada(
+        self,
+        interfaz,
+        control_sesiones,
+    ):
+        ejercicio = self.configurar_formulario_valido(
+            interfaz,
+            duracion="30",
+            intensidad="MEDIA",
+            realizadas="4",
+        )
+
+        ejercicio["veces_planificadas"] = 5
+        ejercicio["veces_realizadas"] = 1
+
+        control_sesiones.registrar_sesion.return_value = (
+            SimpleNamespace(
+                completada=True,
+                calorias_quemadas=250.0,
+                veces_realizadas=4,
+            )
+        )
+
+        with patch(
+            "src.interfaz.interfaz_registro_sesion.date"
+        ) as mock_date, patch.object(
+            interfaz,
+            "mostrar_mensaje",
+        ) as mock_mensaje, patch.object(
+            interfaz,
+            "cancelarRegistro",
+        ), patch.object(
+            interfaz,
+            "_cargar_rutina_activa",
+        ):
+            mock_date.today.return_value = date(
+                2026,
+                9,
+                27,
+            )
+
+            interfaz.registrarSesion()
+
+        mensaje = mock_mensaje.call_args.args[0]
+
+        assert "Estado de la sesión: completada" in mensaje
+        assert "Restaban antes del registro: 4" in mensaje
+
+    def test_cargar_rutina_activa_sin_ejercicios_muestra_mensaje(
+        self,
+        interfaz,
+        control_sesiones,
+    ):
+        asignacion = SimpleNamespace(
+            id_asignacion=100,
+            id_rutina=25,
+            estado="ACTIVA",
+        )
+
+        control_sesiones.asignacion_dao.buscar_activa.return_value = (
+            asignacion
+        )
+
+        control_sesiones.asignacion_ejercicio_dao.obtener_progreso.return_value = []
+
+        interfaz._cargar_rutina_activa()
+
+        assert interfaz._id_asignacion == 100
+        assert interfaz._id_rutina == 25
+        assert interfaz._ejercicios_asignados == []
+        assert interfaz._cb_ejercicio["values"] == []
+
+        assert interfaz._lbl_mensaje.configuracion == {
+            "text": (
+                "La rutina activa no tiene ejercicios "
+                "disponibles."
+            ),
+            "foreground": "#b00020",
+        }
+
+    def test_cargar_rutina_activa_muestra_error_si_falla_consulta(
+        self,
+        interfaz,
+        control_sesiones,
+    ):
+        control_sesiones.asignacion_dao.buscar_activa.side_effect = (
+            RuntimeError("Fallo de conexión")
+        )
+
+        with patch.object(
+            interfaz,
+            "mostrar_error",
+        ) as mock_error:
+            interfaz._cargar_rutina_activa()
+
+        mock_error.assert_called_once_with(
+            "No se pudo cargar la rutina activa: "
+            "Fallo de conexión"
+        )

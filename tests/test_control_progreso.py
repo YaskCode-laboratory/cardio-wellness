@@ -1011,8 +1011,10 @@ def test_actualizar_peso_cliente_sin_cliente_dao():
     controlador = ControlProgreso(
         progreso_dao=Mock(),
         sesion_dao=Mock(),
-        cliente_dao=None,
+        cliente_dao=Mock(),
     )
+
+    controlador._cliente_dao = None
 
     cliente = SimpleNamespace(
         id_usuario=10,

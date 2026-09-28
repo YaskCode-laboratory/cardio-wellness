@@ -314,6 +314,7 @@ class AsignacionRutinaDAO:
         """
         if (
             not isinstance(id_asignacion, int)
+            or isinstance(id_asignacion, bool)
             or id_asignacion <= 0
         ):
             raise ValueError(

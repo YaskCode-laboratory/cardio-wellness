@@ -632,3 +632,188 @@ def test_registrar_administrador_edad_invalida(
             contrasenia_plana="Clave123!",
             edad=edad,
         )
+
+@pytest.mark.parametrize(
+    "correo",
+    [
+        "",
+        "   ",
+        None,
+        123,
+    ],
+)
+def test_restablecer_contrasenia_rechaza_correo_invalido(
+    controlador,
+    correo,
+):
+    """
+    Verifica que el correo sea obligatorio al restablecer
+    la contraseña administrativa.
+    """
+    with pytest.raises(
+        ValueError,
+        match="correo",
+    ):
+        controlador.restablecer_contrasenia_administrador(
+            correo,
+            "ClaveNueva123!",
+        )
+
+@pytest.mark.parametrize(
+    "contrasenia",
+    [
+        "",
+        None,
+        123,
+    ],
+)
+def test_restablecer_contrasenia_rechaza_contrasenia_vacia(
+    controlador,
+    contrasenia,
+):
+    """
+    Verifica que la nueva contraseña sea obligatoria.
+    """
+    with pytest.raises(
+        ValueError,
+        match="contraseña",
+    ):
+        controlador.restablecer_contrasenia_administrador(
+            "admin@example.com",
+            contrasenia,
+        )
+
+def test_restablecer_contrasenia_rechaza_contrasenia_debil(
+    controlador,
+):
+    """
+    Verifica que se rechace una contraseña que no cumpla
+    las reglas de seguridad.
+    """
+    with patch(
+        "src.controladores.control_autenticacion."
+        "GestorSeguridad.validar_fortaleza_contrasena",
+        return_value=False,
+    ) as mock_fortaleza:
+        with pytest.raises(
+            ValueError,
+            match="8 caracteres",
+        ):
+            controlador.restablecer_contrasenia_administrador(
+                "admin@example.com",
+                "debil",
+            )
+
+    mock_fortaleza.assert_called_once_with("debil")
+
+@pytest.mark.parametrize(
+    "resultado_dao",
+    [
+        False,
+        None,
+        0,
+        "actualizado",
+    ],
+)
+def test_restablecer_contrasenia_falla_si_dao_no_confirma(
+    controlador,
+    mock_usuario_dao,
+    resultado_dao,
+):
+    """
+    Verifica que el controlador lance RuntimeError si el DAO
+    no devuelve exactamente True.
+    """
+    mock_usuario_dao.restablecer_contrasenia_administrador.return_value = (
+        resultado_dao
+    )
+
+    with patch(
+        "src.controladores.control_autenticacion."
+        "GestorSeguridad.validar_fortaleza_contrasena",
+        return_value=True,
+    ):
+        with pytest.raises(
+            RuntimeError,
+            match="No se pudo confirmar",
+        ):
+            controlador.restablecer_contrasenia_administrador(
+                "  ADMIN@EXAMPLE.COM  ",
+                "ClaveNueva123!",
+            )
+
+    mock_usuario_dao.restablecer_contrasenia_administrador.assert_called_once_with(
+        "admin@example.com",
+        "ClaveNueva123!",
+    )
+
+def test_restablecer_contrasenia_exitoso_registra_log(
+    controlador,
+    mock_usuario_dao,
+):
+    """
+    Verifica que el restablecimiento válido actualice el DAO
+    y registre el evento de auditoría.
+    """
+    mock_usuario_dao.restablecer_contrasenia_administrador.return_value = (
+        True
+    )
+
+    with patch(
+        "src.controladores.control_autenticacion."
+        "GestorSeguridad.validar_fortaleza_contrasena",
+        return_value=True,
+    ) as mock_fortaleza, patch.object(
+        controlador,
+        "_registrar_log",
+    ) as mock_registrar_log:
+        resultado = (
+            controlador.restablecer_contrasenia_administrador(
+                "  ADMIN@EXAMPLE.COM  ",
+                "ClaveNueva123!",
+            )
+        )
+
+    assert resultado is True
+
+    mock_fortaleza.assert_called_once_with(
+        "ClaveNueva123!"
+    )
+
+    mock_usuario_dao.restablecer_contrasenia_administrador.assert_called_once_with(
+        "admin@example.com",
+        "ClaveNueva123!",
+    )
+
+    mock_registrar_log.assert_called_once_with(
+        "admin@example.com",
+        "RESTABLECIMIENTO_CONTRASENIA_ADMIN",
+        "Contraseña administrativa restablecida",
+    )
+
+def test_listar_administradores_delega_en_dao(
+    controlador,
+    mock_usuario_dao,
+):
+    """
+    Verifica que listar_administradores delegue la consulta
+    al DAO y devuelva su resultado.
+    """
+    administradores = [
+        Mock(
+            correo_electronico="admin1@example.com",
+        ),
+        Mock(
+            correo_electronico="admin2@example.com",
+        ),
+    ]
+
+    mock_usuario_dao.listar_administradores.return_value = (
+        administradores
+    )
+
+    resultado = controlador.listar_administradores()
+
+    assert resultado is administradores
+
+    mock_usuario_dao.listar_administradores.assert_called_once_with()

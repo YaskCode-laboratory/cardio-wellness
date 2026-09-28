@@ -258,9 +258,6 @@ def test_crear_ejercicio_acepta_intensidad_enum(
         ("Cinta", "Desc", 0, 200),
         ("Cinta", "Desc", -10, 200),
         ("Cinta", "Desc", "30", 200),
-        ("Cinta", "Desc", 30, 0),
-        ("Cinta", "Desc", 30, -50),
-        ("Cinta", "Desc", 30, "200"),
     ],
 )
 def test_crear_ejercicio_validaciones_incorrectas(
@@ -272,6 +269,10 @@ def test_crear_ejercicio_validaciones_incorrectas(
 ):
     """
     Prueba validaciones de creación inválida.
+
+    Las calorías ya no se validan como un campo obligatorio,
+    positivo o numérico en este flujo. Se mantienen las
+    validaciones de nombre, descripción y duración.
     """
     with pytest.raises(ValueError):
         controlador.crear_ejercicio(

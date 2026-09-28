@@ -60,7 +60,7 @@ class ControlEjercicios(ControlBase):
         nombre: str,
         descripcion: str,
         duracion_minutos: Union[int, float],
-        calorias_estimadas: Union[int, float],
+        calorias_estimadas: Union[int, float] = 0.0,
         tipo: str = "cardio",
         intensidad: str = "MEDIA",
         usuario_creador: Optional[int] = None,
@@ -74,8 +74,7 @@ class ControlEjercicios(ControlBase):
             raise ValueError("La descripción no puede estar vacía")
         if not isinstance(duracion_minutos, (int, float)) or duracion_minutos <= 0:
             raise ValueError("La duración debe ser un número positivo")
-        if not isinstance(calorias_estimadas, (int, float)) or calorias_estimadas <= 0:
-            raise ValueError("Las calorías deben ser un número positivo")
+
 
 
         ejercicio = EjercicioCardio(
@@ -84,7 +83,7 @@ class ControlEjercicios(ControlBase):
             tipo=tipo,
             duracion_minutos=int(duracion_minutos),
             intensidad=Intensidad(intensidad.upper()) if isinstance(intensidad, str) else intensidad,
-            calorias_estimadas=float(calorias_estimadas),
+            calorias_estimadas=0.0,
             creado_por=usuario_creador,
         )
 

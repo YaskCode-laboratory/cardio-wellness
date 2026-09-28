@@ -669,6 +669,14 @@ class InterfazProgreso(InterfazBase):
         self,
         resumen: dict,
     ) -> None:
+        """
+        Evalúa la meta principal del cliente y actualiza el
+        mensaje principal de estado.
+
+        Para objetivos de pérdida de peso se usa siempre el
+        peso objetivo configurado en el cliente. Nunca se usa
+        una meta fija de 70 kg ni un valor predeterminado.
+        """
         if not hasattr(self, "_lbl_meta"):
             self._asegurar_labels_resumen()
 
@@ -682,6 +690,7 @@ class InterfazProgreso(InterfazBase):
         )
 
         objetivo_minusculas = objetivo.lower()
+
         total_sesiones = resumen.get(
             "total_sesiones",
             0,
@@ -710,44 +719,32 @@ class InterfazProgreso(InterfazBase):
                     ),
                     foreground="red",
                 )
-            return
 
-        if objetivo_minusculas == "bajar de peso":
-            if peso <= 70:
-                self._lbl_meta.config(
-                    text=(
-                        "META ALCANZADA! "
-                        f"Peso: {peso:.1f} kg"
-                    ),
-                    foreground="green",
-                )
-            else:
-                self._lbl_meta.config(
-                    text=(
-                        "Meta no alcanzada. "
-                        f"Peso: {peso:.1f} kg "
-                        "(Meta: 70 kg)"
-                    ),
-                    foreground="red",
-                )
             return
 
         if (
-            "perder peso" in objetivo_minusculas
+            objetivo_minusculas == "bajar de peso"
+            or "perder peso" in objetivo_minusculas
             or "bajar" in objetivo_minusculas
         ):
-            peso_objetivo = getattr(
-                self._cliente,
-                "peso_objetivo",
-                None,
+            peso_objetivo = self._obtener_numero(
+                getattr(
+                    self._cliente,
+                    "peso_objetivo",
+                    None,
+                ),
+                0.0,
             )
 
-            meta_peso = self._obtener_numero(
-                peso_objetivo,
-                75.0,
-            )
+            if peso_objetivo <= 0:
+                self._lbl_meta.config(
+                    text="Meta de peso no configurada.",
+                    foreground="red",
+                )
 
-            if peso <= meta_peso:
+                return
+
+            if peso <= peso_objetivo:
                 self._lbl_meta.config(
                     text=(
                         "META ALCANZADA! "
@@ -757,9 +754,9 @@ class InterfazProgreso(InterfazBase):
                 )
             else:
                 texto_meta = (
-                    str(int(meta_peso))
-                    if meta_peso.is_integer()
-                    else str(meta_peso)
+                    str(int(peso_objetivo))
+                    if peso_objetivo.is_integer()
+                    else str(peso_objetivo)
                 )
 
                 self._lbl_meta.config(
@@ -770,9 +767,11 @@ class InterfazProgreso(InterfazBase):
                     ),
                     foreground="red",
                 )
+
             return
 
         self._actualizar_meta()
+
 
     def _actualizar_meta(self) -> None:
         if not hasattr(self, "_lbl_peso_actual"):
@@ -874,6 +873,11 @@ class InterfazProgreso(InterfazBase):
                 foreground="green",
             )
         else:
+            self._lbl_meta.config(
+                text="META NO ALCANZADA",
+                foreground="red",
+            )
+
             self._lbl_diferencia_meta.config(
                 text=(
                     "Diferencia restante: "

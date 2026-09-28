@@ -77,6 +77,20 @@ class InterfazRutinasAsignadas(InterfazBase):
 
         self._cargar_ejercicios_disponibles()
 
+        try:
+            self.winfo_toplevel().bind(
+                "<<EjerciciosActualizados>>",
+                self._actualizar_ejercicios_disponibles,
+                add="+",
+            )
+        except (
+            AttributeError,
+            KeyError,
+            tk.TclError,
+        ):
+            pass
+
+
     def _construir_formulario_busqueda(self) -> None:
         """
         Construye los controles de búsqueda de una rutina
@@ -396,7 +410,7 @@ class InterfazRutinasAsignadas(InterfazBase):
 
         ttk.Button(
             frame_ejercicios,
-            text="Desactivar ejercicio",
+            text="Eliminar de rutina",
             command=self.desactivar_ejercicio_cliente,
         ).pack(
             side="left",
@@ -429,14 +443,6 @@ class InterfazRutinasAsignadas(InterfazBase):
             padx=3,
         )
 
-        ttk.Button(
-            frame_sesiones,
-            text="Ver / eliminar sesiones",
-            command=self.ver_sesiones_asignacion,
-        ).pack(
-            side="left",
-            padx=3,
-        )
 
         ttk.Button(
             frame_sesiones,
@@ -634,6 +640,19 @@ class InterfazRutinasAsignadas(InterfazBase):
             self._id_ejercicio_asignado_seleccionado = (
                 None
             )
+
+    def _actualizar_ejercicios_disponibles(
+        self,
+        _evento=None,
+    ) -> None:
+        """
+        Recarga los ejercicios globales disponibles para
+        agregarlos a la rutina individual del cliente.
+        """
+        if self._control_ejercicios is None:
+            return
+
+        self._cargar_ejercicios_disponibles()
 
     def _cargar_ejercicios_disponibles(self) -> None:
         """
@@ -917,6 +936,10 @@ class InterfazRutinasAsignadas(InterfazBase):
     def registrar_sesion_administrador(self) -> None:
         """
         Registra una sesión para el ejercicio seleccionado.
+
+        Las calorías se calculan automáticamente en
+        ControlSesiones usando peso, duración, tipo e
+        intensidad del ejercicio.
         """
         if self._control_sesiones is None:
             self.mostrar_error(
@@ -1007,16 +1030,6 @@ class InterfazRutinasAsignadas(InterfazBase):
                     "MEDIA o ALTA."
                 )
 
-            calorias = simpledialog.askfloat(
-                "Calorías",
-                "Ingrese las calorías quemadas:",
-                parent=self,
-                minvalue=0,
-            )
-
-            if calorias is None:
-                return
-
             observaciones = simpledialog.askstring(
                 "Observaciones",
                 "Observaciones opcionales:",
@@ -1032,7 +1045,6 @@ class InterfazRutinasAsignadas(InterfazBase):
                     rutina=id_rutina,
                     duracion_real=duracion,
                     intensidad_real=intensidad,
-                    calorias_quemadas=calorias,
                     observaciones=observaciones or "",
                     nombre_ejercicio=nombre_ejercicio,
                     veces_planificadas=restantes,
@@ -1048,7 +1060,9 @@ class InterfazRutinasAsignadas(InterfazBase):
                     "Sesión registrada correctamente.\n"
                     f"ID de sesión: {sesion.id_sesion}\n"
                     f"Ejercicio: {nombre_ejercicio}\n"
-                    f"Cantidad agregada: {cantidad}"
+                    f"Cantidad agregada: {cantidad}\n"
+                    f"Calorías estimadas: "
+                    f"{sesion.calorias_quemadas} kcal"
                 )
             )
 
@@ -1079,272 +1093,6 @@ class InterfazRutinasAsignadas(InterfazBase):
         except Exception as error:
             self.mostrar_error(
                 f"No se pudo registrar la sesión: {error}"
-            )
-
-    def ver_sesiones_asignacion(self) -> None:
-        """
-        Muestra sesiones vinculadas a la asignación actual.
-        """
-        if self._control_sesiones is None:
-            self.mostrar_error(
-                "No se configuró ControlSesiones."
-            )
-            return
-
-        if self._id_cliente_actual is None:
-            self.mostrar_error(
-                "Busque primero la rutina activa de un cliente."
-            )
-            return
-
-        if self._id_asignacion_actual is None:
-            self.mostrar_error(
-                "No existe una asignación activa cargada."
-            )
-            return
-
-        try:
-            sesiones_cliente = (
-                self._control_sesiones
-                .obtener_sesiones_cliente(
-                    self._id_cliente_actual
-                )
-            )
-
-            sesiones_asignacion = [
-                sesion
-                for sesion in sesiones_cliente
-                if (
-                    sesion.id_asignacion
-                    == self._id_asignacion_actual
-                )
-            ]
-
-            ventana = tk.Toplevel(self)
-
-            ventana.title(
-                (
-                    "Sesiones de la asignación "
-                    f"{self._id_asignacion_actual}"
-                )
-            )
-
-            ventana.geometry("950x480")
-
-            frame = ttk.Frame(
-                ventana,
-                padding=10,
-            )
-
-            frame.pack(
-                fill="both",
-                expand=True,
-            )
-
-            columnas = (
-                "ID",
-                "Fecha",
-                "Ejercicio",
-                "Duración",
-                "Intensidad",
-                "Calorías",
-                "Cantidad",
-            )
-
-            tree = ttk.Treeview(
-                frame,
-                columns=columnas,
-                show="headings",
-                selectmode="browse",
-                height=12,
-            )
-
-            for columna in columnas:
-                tree.heading(
-                    columna,
-                    text=columna,
-                )
-
-            tree.column(
-                "ID",
-                width=70,
-                anchor="center",
-            )
-
-            tree.column(
-                "Fecha",
-                width=100,
-                anchor="center",
-            )
-
-            tree.column(
-                "Ejercicio",
-                width=220,
-                anchor="w",
-            )
-
-            tree.column(
-                "Duración",
-                width=100,
-                anchor="center",
-            )
-
-            tree.column(
-                "Intensidad",
-                width=100,
-                anchor="center",
-            )
-
-            tree.column(
-                "Calorías",
-                width=100,
-                anchor="center",
-            )
-
-            tree.column(
-                "Cantidad",
-                width=100,
-                anchor="center",
-            )
-
-            tree.pack(
-                fill="both",
-                expand=True,
-            )
-
-            for sesion in sesiones_asignacion:
-                intensidad = getattr(
-                    sesion.intensidad_real,
-                    "value",
-                    str(sesion.intensidad_real),
-                )
-
-                tree.insert(
-                    "",
-                    "end",
-                    values=(
-                        sesion.id_sesion,
-                        sesion.fecha,
-                        sesion.nombre_ejercicio,
-                        sesion.duracion_real,
-                        intensidad,
-                        sesion.calorias_quemadas,
-                        sesion.veces_realizadas,
-                    ),
-                )
-
-            botones = ttk.Frame(ventana)
-
-            botones.pack(
-                fill="x",
-                padx=10,
-                pady=10,
-            )
-
-            ttk.Button(
-                botones,
-                text="Eliminar sesión seleccionada",
-                command=lambda: (
-                    self._eliminar_sesion_desde_ventana(
-                        tree,
-                        ventana,
-                    )
-                ),
-            ).pack(
-                side="left",
-                padx=3,
-            )
-
-            ttk.Button(
-                botones,
-                text="Cerrar",
-                command=ventana.destroy,
-            ).pack(
-                side="right",
-                padx=3,
-            )
-
-        except Exception as error:
-            self.mostrar_error(
-                f"No se pudieron cargar las sesiones: {error}"
-            )
-
-    def _eliminar_sesion_desde_ventana(
-        self,
-        tree,
-        ventana,
-    ) -> None:
-        """
-        Elimina la sesión seleccionada y recarga progreso.
-        """
-        if self._control_sesiones is None:
-            self.mostrar_error(
-                "No se configuró ControlSesiones."
-            )
-            return
-
-        seleccion = tree.selection()
-
-        if not seleccion:
-            self.mostrar_error(
-                "Seleccione una sesión para eliminar."
-            )
-            return
-
-        valores = tree.item(
-            seleccion[0],
-            "values",
-        )
-
-        if not valores:
-            self.mostrar_error(
-                "No se pudo obtener la sesión seleccionada."
-            )
-            return
-
-        try:
-            id_sesion = int(valores[0])
-
-            if not self.confirmar_accion(
-                (
-                    f"¿Eliminar la sesión #{id_sesion}? "
-                    "El progreso de la rutina disminuirá."
-                )
-            ):
-                return
-
-            administrador_id = (
-                self._obtener_id_administrador()
-            )
-
-            eliminado = (
-                self._control_sesiones
-                .eliminar_sesion(
-                    id_sesion=id_sesion,
-                    usuario_accion=(
-                        f"ADMIN_{administrador_id}"
-                    ),
-                )
-            )
-
-            if not eliminado:
-                raise ValueError(
-                    "No se encontró la sesión indicada."
-                )
-
-            self.mostrar_mensaje(
-                "Sesión eliminada correctamente."
-            )
-
-            ventana.destroy()
-
-            self._cargar_progreso()
-
-            self.ver_sesiones_asignacion()
-
-        except Exception as error:
-            self.mostrar_error(
-                f"No se pudo eliminar la sesión: {error}"
             )
 
     def cambiar_rutina_cliente(self) -> None:
