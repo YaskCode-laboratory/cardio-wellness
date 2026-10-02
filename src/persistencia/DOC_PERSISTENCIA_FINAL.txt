@@ -252,34 +252,34 @@ La capa de persistencia se organiza en torno a la conexión y
 los DAOs. Su estructura es la siguiente:
 
 ┌─────────────────────────────────────────────┐
-│ CONEXIÓN 				      │
-│ ConexionBD (Singleton) 		      │
-│ - obtener_instancia()  		      │
-│ - abrir_conexion()  			      │
-│ - ejecutar_consulta() 		      │
-│ - ejecutar_actualizacion() 		      │
+│ CONEXIÓN 				                            │
+│ ConexionBD (Singleton) 		                  │
+│ - obtener_instancia()  		                  │
+│ - abrir_conexion()  			                  │
+│ - ejecutar_consulta() 		                  │
+│ - ejecutar_actualizacion() 		              │
 └─────────────────────────────────────────────┘
 │
 │ (Dependencia)
 ▼
 ┌─────────────────────────────────────────────┐
-│ DAOs   				      │
+│ DAOs   				                              │
 │ ┌────────────┐ ┌────────────┐ ┌────────────┐│
 │ │ UsuarioDAO │ │ ClienteDAO │ │EjercicioDAO││
 │ └────────────┘ └────────────┘ └────────────┘│
 │ ┌────────────┐ ┌────────────┐ ┌────────────┐│
 │ │ RutinaDAO  │ │ Asignacion │ │   Sesion   ││
 │ └────────────┘ │  RutinaDAO │ │    DAO     ││
-│ 		 └────────────┘ └────────────┘│
-│ ┌────────────┐		              │
-│ │ Progreso   │			      │
-│ │ MensualDAO │ 	 		      │
-│ └────────────┘ 			      │
+│ 		           └────────────┘ └────────────┘│
+│ ┌────────────┐		                          │
+│ │ Progreso   │		                  	      │
+│ │ MensualDAO │ 	 		                        │
+│ └────────────┘ 			                        │
 └─────────────────────────────────────────────┘
 │
 ▼
 ┌─────────────────────────────────────────────┐
-│ BASE DE DATOS				      │
+│ BASE DE DATOS				                        │
 │ PostgreSQL                                  │
 │ - Tablas: usuarios, clientes, ejercicios,   │
 │ rutinas, asignaciones_rutina, sesiones,     │
@@ -316,15 +316,15 @@ cuanto a nombres, tipos y relaciones.
 
 TABLA DE CORRESPONDENCIA:
 
-DCD (Clase) Python (DAO) DDL (tabla)
-Usuario UsuarioDAO usuarios
-Cliente ClienteDAO clientes + usuarios
-Administrador UsuarioDAO usuarios (con tipo)
-EjercicioCardio EjercicioDAO ejercicios
-Rutina RutinaDAO rutinas
-AsignacionRutina AsignacionRutinaDAO asignaciones_rutina
-SesionEntrenamiento SesionEntrenamientoDAO sesiones_entrenamiento
-ProgresoMensual ProgresoMensualDAO progreso_mensual
+DCD (Clase) - Python - (DAO) DDL (tabla)
+Usuario - UsuarioDAO - usuarios
+Cliente - ClienteDAO - clientes + usuarios
+Administrador - UsuarioDAO - usuarios (con tipo)
+EjercicioCardio - EjercicioDAO - ejercicios
+Rutina - RutinaDAO - rutinas
+AsignacionRutina - AsignacionRutinaDAO - asignaciones_rutina
+SesionEntrenamiento - SesionEntrenamientoDAO - sesiones_entrenamiento
+ProgresoMensual - ProgresoMensualDAO - progreso_mensual
 
 Las relaciones (composición, agregación, herencia) se mantienen
 en el modelo relacional mediante claves foráneas y restricciones.
