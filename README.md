@@ -18,7 +18,7 @@ Vacio en el mercado de software para pequeños estudios.
 
 ## 📋 Area de Wellness
 
-Cardio/ Fitness/ Salud
+Cardio/ Fitness/ Salud.
 
 ---
 
@@ -30,9 +30,9 @@ Gestionar rutinas cardio y progreso mensual.
 
 ## 📋 Funcionalidades principales
 
-Login de Usuarios (Administrador/Entrenador y Cliente)
-Administrador: Gestión y registro de Clientes, Asignación de Rutinas. Creación y Gestión de Ejercicios y Rutinas.
-Cliente: Consulta de rutinas, registro de sesiones de entrenamiento y consultas de progreso mensual.
+- Login de Usuarios (Administrador/Entrenador y Cliente)
+- Administrador: Gestión y registro de Clientes, Asignación de Rutinas. Creación y Gestión de Ejercicios y Rutinas.
+- Cliente: Consulta de rutinas, registro de sesiones de entrenamiento y consultas de progreso mensual.
 
 ---
 
@@ -182,9 +182,9 @@ Proyecto desarrollado para fines académicos.
 
 ## 📋 Equipo Desarrollador
 
-Juan Perea
-Emiro Rincón
-Eliam Rodriguez
+- Juan Perea.
+- Emiro Rincón.
+- Eliam Rodriguez
 
 ---
 
