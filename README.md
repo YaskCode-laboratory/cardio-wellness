@@ -10,6 +10,44 @@ Cardio-Wellness es un sistema completo para la gestión de rutinas de entrenamie
 
 ---
 
+## 📋 Problema que aborda
+
+Vacio en el mercado de software para pequeños estudios.
+
+---
+
+## 📋 Area de Wellness
+
+Cardio/ Fitness/ Salud
+
+---
+
+## 📋 Objetivo
+
+Gestionar rutinas cardio y progreso mensual.
+
+---
+
+## 📋 Funcionalidades principales
+
+Login de Usuarios (Administrador/Entrenador y Cliente)
+Administrador: Gestión y registro de Clientes, Asignación de Rutinas. Creación y Gestión de Ejercicios y Rutinas.
+Cliente: Consulta de rutinas, registro de sesiones de entrenamiento y consultas de progreso mensual.
+
+---
+
+## 📋 Tecnologías utilizadas
+
+Python, Tkinter, PostgreSQL, psycopg2, bcrypt, reportlab, pytest.
+
+--- 
+
+## 📋 Arquitectura/ Diseño
+
+4 Capas + Patrones (Singleton, DAO, Factory). Arquitectura basada en el DCD.
+
+---
+
 ## 🚀 Instalación
 
 ```bash
@@ -137,8 +175,18 @@ Proyecto desarrollado para fines académicos.
 ---
 
 **Versión:** 1.0.0  
-**Última actualización:** 2026-09-13  
+**Última actualización:** 2026-09-26  
 **Estado:** ✅ Producción
+
+---
+
+## 📋 Equipo Desarrollador
+
+Juan Perea
+Emiro Rincón
+Eliam Rodriguez
+
+---
 
 ## Nota sobre la base de datos
 
