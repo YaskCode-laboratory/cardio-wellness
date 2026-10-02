@@ -168,13 +168,13 @@ sin necesidad de insertar datos manualmente:
 ================================================================
 7. SCRIPT DEFINITIVO
 ----------------------------------------------------------------
-El archivo `script2.sql` contiene la versión definitiva del DDL.
+El archivo `schema.sql` contiene la versión definitiva del DDL.
 - No se realizarán más cambios en la estructura de la base de datos.
 - El script está listo para ejecutarse en PostgreSQL.
 - La base de datos está normalizada, con ACID y buenas prácticas.
 
 PRÓXIMOS PASOS:
-1. Ejecutar `script2.sql` en PostgreSQL.
+1. Ejecutar `schema.sql` en PostgreSQL.
 2. Verificar vistas con `SELECT * FROM vw_clientes_completo;`
 3. Integrar con el código Python (DAO y Controladores).
 4. Conectar la interfaz (Tkinter) con la base de datos.
