@@ -295,13 +295,13 @@ nombres, tipos y relaciones.
 
 TABLA DE CORRESPONDENCIA:
 
-DCD (Controlador) Python (Controlador) DDL (Tablas involucradas)
-ControlAutenticacion control_autenticacion.py usuarios
-ControlClientes control_clientes.py usuarios, clientes
-ControlEjercicios control_ejercicios.py ejercicios
-ControlRutinas control_rutinas.py rutinas, rutina_ejercicios
-ControlSesiones control_sesiones.py sesiones_entrenamiento
-ControlProgreso control_progreso.py progreso_mensual
+DCD (Controlador) - Python (Controlador) - DDL (Tablas involucradas)
+ControlAutenticacion - control_autenticacion.py - usuarios
+ControlClientes - control_clientes.py - usuarios, clientes
+ControlEjercicios - control_ejercicios.py - ejercicios
+ControlRutinas - control_rutinas.py - rutinas, rutina_ejercicios
+ControlSesiones - control_sesiones.py - sesiones_entrenamiento
+ControlProgreso - control_progreso.py - progreso_mensual
 
 Las reglas de negocio (asignación de rutinas, cálculo de
 cumplimiento, etc.) están implementadas en los controladores y
