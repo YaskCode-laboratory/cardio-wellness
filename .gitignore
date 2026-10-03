@@ -72,3 +72,17 @@ backups/
 database/cardio_wellness.sql
 *.dump
 *.backup
+
+# Claves, certificados y credenciales
+*.pem
+*.key
+*.pfx
+*.p12
+*.crt
+*.cer
+credentials.json
+service-account.json
+
+# Exportaciones SQL y respaldos locales
+backups/*.sql
+database/*.sql

@@ -1,10 +1,17 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """
-Prueba de estrés optimizada para PostgreSQL - Cardio-Wellness.
-Con creación dinámica de clientes de prueba y manejo de errores
-de concurrencia.
+Prueba de estrés para PostgreSQL - Cardio-Wellness.
+
+Crea clientes temporales, ejecuta operaciones concurrentes y limpia
+los datos creados al finalizar.
+
+Por seguridad, solo puede ejecutarse contra:
+cardio_wellness_prueba_limpieza
 """
 
 import argparse
+import os
 import random
 import threading
 import time
@@ -16,16 +23,19 @@ import psycopg2
 from psycopg2 import pool
 
 
+SAFE_TEST_DATABASE = "cardio_wellness_prueba_limpieza"
+
+
 class StressTesterPostgreSQL:
-    """Clase para ejecutar pruebas de estrés en PostgreSQL."""
+    """Ejecuta pruebas de estrés concurrentes sobre PostgreSQL."""
 
     def __init__(
         self,
-        host: str = "localhost",
-        port: int = 5432,
-        database: str = "cardio_wellness",
-        user: str = "postgres",
-        password: str = "admin",
+        host: str = os.getenv("DB_HOST", "localhost"),
+        port: int = int(os.getenv("DB_PORT", "5432")),
+        database: str = os.getenv("DB_NAME", SAFE_TEST_DATABASE),
+        user: str = os.getenv("DB_USER", "postgres"),
+        password: str | None = None,
         num_usuarios: int = 20,
         duracion: int = 30,
         num_clientes_prueba: int = 100,
@@ -38,19 +48,26 @@ class StressTesterPostgreSQL:
         self.num_usuarios = num_usuarios
         self.duracion = duracion
         self.num_clientes_prueba = num_clientes_prueba
+
         self.running = True
         self.ops_exitosas = 0
         self.ops_fallidas = 0
         self.response_times = []
+
         self.lock = threading.Lock()
         self.connection_pool = None
-        self.id_clientes_reales = []
+
+        self.id_usuarios_prueba = []
+        self.id_clientes_prueba = []
 
     def _init_pool(self):
         """Inicializa el pool de conexiones."""
+
+        max_conexiones = max(1, min(self.num_usuarios, 100))
+
         self.connection_pool = pool.SimpleConnectionPool(
             1,
-            100,
+            max_conexiones,
             host=self.host,
             port=self.port,
             database=self.database,
@@ -58,10 +75,25 @@ class StressTesterPostgreSQL:
             password=self.password,
         )
 
-        print("✅ Pool de conexiones inicializado (1-100 conexiones)")
+        print(
+            "✅ Pool de conexiones inicializado "
+            f"(1-{max_conexiones} conexiones)"
+        )
+
+    def _get_connection(self):
+        """Obtiene una conexión desde el pool."""
+
+        return self.connection_pool.getconn()
+
+    def _release_connection(self, conn):
+        """Devuelve una conexión al pool."""
+
+        if conn is not None and self.connection_pool is not None:
+            self.connection_pool.putconn(conn)
 
     def _crear_clientes_prueba(self):
-        """Crea clientes de prueba dinámicamente."""
+        """Crea usuarios y clientes temporales para el test."""
+
         print(
             f"\n📝 Creando "
             f"{self.num_clientes_prueba} clientes de prueba..."
@@ -71,11 +103,9 @@ class StressTesterPostgreSQL:
 
         try:
             with conn.cursor() as cursor:
-                for i in range(self.num_clientes_prueba):
-                    correo = (
-                        f"stress.{uuid4().hex[:8]}@test.com"
-                    )
-                    hash_temporal = "hash_temporal"
+                for indice in range(self.num_clientes_prueba):
+                    correo = f"stress.{uuid4().hex[:12]}@test.com"
+                    hash_temporal = "hash_temporal_stress_test"
 
                     cursor.execute(
                         """
@@ -84,18 +114,16 @@ class StressTesterPostgreSQL:
                             apellido,
                             correo_electronico,
                             contrasenia_hash,
-                            "contraseña_hash",
                             edad,
                             tipo_usuario
                         )
-                        VALUES (%s, %s, %s, %s, %s, %s, %s)
+                        VALUES (%s, %s, %s, %s, %s, %s)
                         RETURNING id_usuario
                         """,
                         (
-                            f"Stress{i}",
+                            f"Stress{indice}",
                             "Test",
                             correo,
-                            hash_temporal,
                             hash_temporal,
                             random.randint(20, 50),
                             "cliente",
@@ -113,6 +141,7 @@ class StressTesterPostgreSQL:
                             objetivo
                         )
                         VALUES (%s, %s, %s, %s)
+                        RETURNING id_usuario
                         """,
                         (
                             id_usuario,
@@ -122,12 +151,15 @@ class StressTesterPostgreSQL:
                         ),
                     )
 
-                    self.id_clientes_reales.append(id_usuario)
+                    id_cliente = cursor.fetchone()[0]
+
+                    self.id_usuarios_prueba.append(id_usuario)
+                    self.id_clientes_prueba.append(id_cliente)
 
             conn.commit()
 
             print(
-                f"✅ {len(self.id_clientes_reales)} "
+                f"✅ {len(self.id_clientes_prueba)} "
                 f"clientes de prueba creados"
             )
 
@@ -139,13 +171,14 @@ class StressTesterPostgreSQL:
             self._release_connection(conn)
 
     def _limpiar_clientes_prueba(self):
-        """Limpia solo los clientes temporales creados."""
+        """Elimina sesiones, clientes y usuarios temporales."""
+
         print(
             f"\n🧹 Limpiando "
-            f"{len(self.id_clientes_reales)} clientes de prueba..."
+            f"{len(self.id_clientes_prueba)} clientes de prueba..."
         )
 
-        if not self.id_clientes_reales:
+        if not self.id_clientes_prueba:
             return
 
         conn = self._get_connection()
@@ -157,7 +190,7 @@ class StressTesterPostgreSQL:
                     DELETE FROM sesiones_entrenamiento
                     WHERE id_cliente = ANY(%s)
                     """,
-                    (self.id_clientes_reales,),
+                    (self.id_clientes_prueba,),
                 )
 
                 cursor.execute(
@@ -165,7 +198,7 @@ class StressTesterPostgreSQL:
                     DELETE FROM clientes
                     WHERE id_usuario = ANY(%s)
                     """,
-                    (self.id_clientes_reales,),
+                    (self.id_clientes_prueba,),
                 )
 
                 cursor.execute(
@@ -173,34 +206,39 @@ class StressTesterPostgreSQL:
                     DELETE FROM usuarios
                     WHERE id_usuario = ANY(%s)
                     """,
-                    (self.id_clientes_reales,),
+                    (self.id_usuarios_prueba,),
                 )
 
             conn.commit()
-
             print("✅ Clientes de prueba eliminados")
 
         except Exception as error:
             conn.rollback()
+
             print(
-                f"⚠️ Error al limpiar clientes de prueba: "
+                "⚠️ Error al limpiar clientes de prueba: "
                 f"{error}"
             )
 
         finally:
             self._release_connection(conn)
 
-    def _get_connection(self):
-        """Obtiene una conexión del pool."""
-        return self.connection_pool.getconn()
+    def _registrar_exito(self, response_time):
+        """Registra una operación ejecutada correctamente."""
 
-    def _release_connection(self, conn):
-        """Devuelve una conexión al pool."""
-        if conn is not None:
-            self.connection_pool.putconn(conn)
+        with self.lock:
+            self.ops_exitosas += 1
+            self.response_times.append(response_time)
+
+    def _registrar_fallo(self):
+        """Registra una operación fallida."""
+
+        with self.lock:
+            self.ops_fallidas += 1
 
     def _simulate_user_behavior(self, user_id: int):
-        """Simula operaciones concurrentes de un usuario."""
+        """Simula operaciones de un usuario concurrente."""
+
         while self.running:
             start_op = time.time()
             conn = None
@@ -228,13 +266,8 @@ class StressTesterPostgreSQL:
 
                 conn.commit()
 
-                response_time = (
-                    time.time() - start_op
-                ) * 1000
-
-                with self.lock:
-                    self.ops_exitosas += 1
-                    self.response_times.append(response_time)
+                response_time = (time.time() - start_op) * 1000
+                self._registrar_exito(response_time)
 
             except (
                 psycopg2.errors.DeadlockDetected,
@@ -245,31 +278,30 @@ class StressTesterPostgreSQL:
                 if conn is not None:
                     conn.rollback()
 
-                time.sleep(
-                    random.uniform(0.05, 0.2)
-                )
+                self._registrar_fallo()
+                time.sleep(random.uniform(0.05, 0.2))
 
-                continue
-
-            except Exception:
+            except Exception as error:
                 if conn is not None:
                     conn.rollback()
 
+                self._registrar_fallo()
+
                 with self.lock:
-                    self.ops_fallidas += 1
+                    print(
+                        f"⚠️ Error en usuario {user_id}: "
+                        f"{type(error).__name__}: {error}"
+                    )
 
             finally:
                 self._release_connection(conn)
 
-            time.sleep(
-                random.uniform(0.02, 0.15)
-            )
+            time.sleep(random.uniform(0.02, 0.15))
 
     def _insert_sesion(self, conn, user_id: int):
-        """Inserta una sesión de entrenamiento."""
-        id_cliente = random.choice(
-            self.id_clientes_reales,
-        )
+        """Inserta una sesión para un cliente temporal."""
+
+        id_cliente = random.choice(self.id_clientes_prueba)
 
         with conn.cursor() as cursor:
             cursor.execute(
@@ -288,23 +320,16 @@ class StressTesterPostgreSQL:
                 (
                     id_cliente,
                     datetime.now().date()
-                    - timedelta(
-                        days=random.randint(0, 30),
-                    ),
+                    - timedelta(days=random.randint(0, 30)),
                     random.randint(15, 90),
                     random.choice(
                         [
                             "BAJA",
                             "MEDIA",
                             "ALTA",
-                            "MUY_ALTA",
-                        ],
+                        ]
                     ),
-                    Decimal(
-                        str(
-                            random.uniform(100, 800),
-                        ),
-                    ),
+                    Decimal(str(random.uniform(100, 800))),
                     f"Sesión estrés {user_id}",
                     True,
                 ),
@@ -312,9 +337,8 @@ class StressTesterPostgreSQL:
 
     def _select_sesiones(self, conn):
         """Consulta sesiones de un cliente temporal."""
-        id_cliente = random.choice(
-            self.id_clientes_reales,
-        )
+
+        id_cliente = random.choice(self.id_clientes_prueba)
 
         with conn.cursor() as cursor:
             cursor.execute(
@@ -336,7 +360,8 @@ class StressTesterPostgreSQL:
             cursor.fetchall()
 
     def _update_sesion(self, conn, user_id: int):
-        """Actualiza una sesión propia sin usar LIMIT inválido."""
+        """Actualiza una sesión creada por el usuario simulado."""
+
         with conn.cursor() as cursor:
             cursor.execute(
                 """
@@ -357,7 +382,8 @@ class StressTesterPostgreSQL:
             )
 
     def _delete_sesion(self, conn, user_id: int):
-        """Elimina una sesión propia sin usar LIMIT inválido."""
+        """Elimina una sesión creada por el usuario simulado."""
+
         with conn.cursor() as cursor:
             cursor.execute(
                 """
@@ -374,6 +400,7 @@ class StressTesterPostgreSQL:
 
     def run(self):
         """Ejecuta la prueba de estrés."""
+
         self._init_pool()
 
         try:
@@ -389,13 +416,10 @@ class StressTesterPostgreSQL:
                 f"Base de datos: "
                 f"{self.database}@{self.host}:{self.port}"
             )
-            print(
-                f"Usuarios concurrentes: "
-                f"{self.num_usuarios}"
-            )
+            print(f"Usuarios concurrentes: {self.num_usuarios}")
             print(
                 f"Clientes de prueba: "
-                f"{len(self.id_clientes_reales)}"
+                f"{len(self.id_clientes_prueba)}"
             )
             print(f"Duración: {self.duracion} segundos")
             print(f"{'=' * 60}\n")
@@ -410,10 +434,10 @@ class StressTesterPostgreSQL:
 
             threads = []
 
-            for i in range(self.num_usuarios):
+            for indice in range(self.num_usuarios):
                 thread = threading.Thread(
                     target=self._simulate_user_behavior,
-                    args=(i + 1,),
+                    args=(indice + 1,),
                     daemon=True,
                 )
 
@@ -427,10 +451,7 @@ class StressTesterPostgreSQL:
                 thread.join(timeout=2)
 
             total_time = time.time() - start_time
-            total_ops = (
-                self.ops_exitosas
-                + self.ops_fallidas
-            )
+            total_ops = self.ops_exitosas + self.ops_fallidas
 
             tasa_exito = (
                 self.ops_exitosas / total_ops * 100
@@ -464,54 +485,39 @@ class StressTesterPostgreSQL:
             )
 
             print(f"\n{'=' * 60}")
-            print(
-                "RESULTADOS DE LA PRUEBA DE ESTRÉS"
-            )
+            print("RESULTADOS DE LA PRUEBA DE ESTRÉS")
             print(f"{'=' * 60}")
-            print(
-                f"Tiempo total: {total_time:.2f} segundos"
-            )
+            print(f"Tiempo total: {total_time:.2f} segundos")
             print(f"Operaciones totales: {total_ops}")
             print(f"Exitosas: {self.ops_exitosas}")
             print(f"Fallidas: {self.ops_fallidas}")
-            print(
-                f"Tasa de éxito: {tasa_exito:.2f}%"
-            )
+            print(f"Tasa de éxito: {tasa_exito:.2f}%")
             print("\nRendimiento:")
-            print(
-                f"  - Ops/segundo: "
-                f"{ops_por_segundo:.2f}"
-            )
-            print(
-                f"  - Avg response: "
-                f"{avg_response:.2f} ms"
-            )
-            print(
-                f"  - Max response: "
-                f"{max_response:.2f} ms"
-            )
-            print(
-                f"  - Min response: "
-                f"{min_response:.2f} ms"
-            )
+            print(f"  - Ops/segundo: {ops_por_segundo:.2f}")
+            print(f"  - Avg response: {avg_response:.2f} ms")
+            print(f"  - Max response: {max_response:.2f} ms")
+            print(f"  - Min response: {min_response:.2f} ms")
             print(f"{'=' * 60}\n")
 
-            if tasa_exito >= 95 and ops_por_segundo >= 10:
+            if tasa_exito >= 99 and ops_por_segundo >= 300:
                 print(
-                    "✅ RESULTADO: EXITOSO - PostgreSQL "
-                    "maneja bien la concurrencia."
+                    "✅ RESULTADO: EXITOSO - "
+                    "Se cumplen los objetivos de estabilidad "
+                    "y rendimiento."
                 )
 
-            elif tasa_exito >= 80:
+            elif tasa_exito >= 95 and ops_por_segundo >= 10:
                 print(
                     "⚠️ RESULTADO: ACEPTABLE - "
-                    "Optimizaciones menores recomendadas."
+                    "La concurrencia funciona, pero se recomiendan "
+                    "optimizaciones adicionales."
                 )
 
             else:
                 print(
                     "❌ RESULTADO: CRÍTICO - "
-                    "Se requieren optimizaciones."
+                    "Se requieren optimizaciones antes de usar "
+                    "esta configuración bajo carga."
                 )
 
         finally:
@@ -523,62 +529,91 @@ class StressTesterPostgreSQL:
 
 
 def main():
+    """Procesa argumentos y ejecuta la prueba."""
+
     parser = argparse.ArgumentParser(
-        description=(
-            "Prueba de estrés para PostgreSQL"
-        ),
+        description="Prueba de estrés para PostgreSQL"
     )
 
     parser.add_argument(
         "--host",
         type=str,
-        default="localhost",
+        default=os.getenv("DB_HOST", "localhost"),
+        help="Host de PostgreSQL; usa DB_HOST o --host.",
     )
 
     parser.add_argument(
         "--port",
         type=int,
-        default=5432,
+        default=int(os.getenv("DB_PORT", "5432")),
+        help="Puerto de PostgreSQL; usa DB_PORT o --port.",
     )
 
     parser.add_argument(
         "--db",
         type=str,
-        default="cardio_wellness",
+        default=os.getenv("DB_NAME", SAFE_TEST_DATABASE),
+        help="Base de datos de prueba; usa DB_NAME o --db.",
     )
 
     parser.add_argument(
         "--user",
         type=str,
-        default="postgres",
+        default=os.getenv("DB_USER", "postgres"),
+        help="Usuario de PostgreSQL; usa DB_USER o --user.",
     )
 
     parser.add_argument(
         "--password",
         type=str,
-        default="admin",
+        default=os.getenv("DB_PASSWORD"),
+        help="Contraseña de PostgreSQL; usa DB_PASSWORD o --password.",
     )
 
     parser.add_argument(
         "--usuarios",
         type=int,
         default=20,
+        help="Cantidad de usuarios concurrentes.",
     )
 
     parser.add_argument(
         "--duracion",
         type=int,
         default=30,
+        help="Duración de la prueba en segundos.",
     )
 
     parser.add_argument(
         "--clientes",
         type=int,
         default=100,
-        help="Clientes temporales a crear",
+        help="Clientes temporales a crear.",
     )
 
     args = parser.parse_args()
+
+    if not args.password:
+        parser.error(
+            "Debes proporcionar --password o definir "
+            "la variable de entorno DB_PASSWORD."
+        )
+
+    if args.db != SAFE_TEST_DATABASE:
+        parser.error(
+            "Por seguridad, el stress test solo puede ejecutarse "
+            f"contra '{SAFE_TEST_DATABASE}'. "
+            f"Base solicitada: '{args.db}'."
+        )
+
+    if args.usuarios < 1:
+        parser.error("--usuarios debe ser mayor o igual a 1.")
+
+    if args.duracion < 1:
+        parser.error("--duracion debe ser mayor o igual a 1.")
+
+    if args.clientes < 1:
+        parser.error("--clientes debe ser mayor o igual a 1.")
 
     tester = StressTesterPostgreSQL(
         host=args.host,
@@ -591,8 +626,17 @@ def main():
         num_clientes_prueba=args.clientes,
     )
 
-    tester.run()
+    try:
+        tester.run()
+        return 0
+
+    except KeyboardInterrupt:
+        print(
+            "\n⚠️ Prueba interrumpida por el usuario. "
+            "Los datos temporales se limpiaron antes de salir."
+        )
+        return 130
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
