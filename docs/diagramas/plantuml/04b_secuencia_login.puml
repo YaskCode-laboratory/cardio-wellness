@@ -1,0 +1,45 @@
+@startuml Secuencia_Login
+title Diagrama de Secuencia - Iniciar Sesión
+autonumber
+skinparam Style strictuml
+skinparam SequenceMessageAlignment center
+
+actor "Usuario" as Usuario
+participant "vista : InterfazLogin" as Vista
+participant "ctrl : ControlAutenticacion" as Ctrl
+participant "usuarioDao : UsuarioDAO" as DAO
+participant "bd : ConexionBD" as BD
+
+Usuario -> Vista : 1: iniciarSesion()
+activate Vista
+
+Vista -> Vista : 1.1: capturarCredenciales()
+Vista -> Ctrl : 1.2: iniciar_sesion(correo, contrasenia)
+activate Ctrl
+
+Ctrl -> DAO : 1.2.1: iniciar_sesion(correo, contrasenia)
+activate DAO
+
+DAO -> BD : 1.2.1.1: ejecutar_consulta(SELECT...)
+activate BD
+BD --> DAO : 1.2.1.2: fila_usuario
+deactivate BD
+
+DAO -> DAO : 1.2.1.3: verificar_contrasenia()
+DAO --> Ctrl : 1.2.2: objeto Usuario o None
+deactivate DAO
+
+alt credenciales validas
+    Ctrl -> Ctrl : 1.2.3: registrar_log("LOGIN_EXITOSO")
+    Ctrl --> Vista : 1.3: usuario
+    Vista --> Usuario : 1.4: abrir_panel_por_rol()
+else credenciales invalidas
+    Ctrl -> Ctrl : 1.2.3: registrar_log("LOGIN_FALLIDO")
+    Ctrl --> Vista : 1.3: None
+    Vista --> Usuario : 1.4: mostrar_error()
+end
+
+deactivate Ctrl
+deactivate Vista
+
+@enduml

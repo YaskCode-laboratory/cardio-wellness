@@ -1,0 +1,34 @@
+@startuml Despliegue
+title Diagrama de Despliegue - Sistema Cardio-Wellness
+
+node "Equipo de Escritorio" as PC {
+    node "Aplicación Python" as App {
+        artifact "main.py" as Main
+        artifact "src/" as Src
+        database "PostgreSQL 18" as PG {
+            artifact "wellness_db" as DB
+        }
+    }
+    
+    folder "Archivos del Sistema" as FS {
+        artifact "logs/LOG_CARDIO.txt" as Log
+        artifact ".env" as Env
+    }
+}
+
+cloud "Sin conexión a Internet" as Offline #DDDDDD
+
+PC -[hidden]- Offline
+
+note right of PC
+    El sistema es 100% offline.
+    No requiere conexión a Internet.
+end note
+
+note right of PG
+    Base de datos local.
+    Puerto: 5432
+    Nombre: wellness_db
+end note
+
+@enduml

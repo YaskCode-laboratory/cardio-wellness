@@ -1,0 +1,41 @@
+@startuml Secuencia
+title Diagrama de Secuencia - Registrar Sesión de Entrenamiento
+autonumber
+skinparam Style strictuml
+
+actor "Cliente" as Cliente
+participant "vista : InterfazRegistroSesion" as Vista
+participant "ctrl : ControlSesiones" as Ctrl
+participant "sesion : SesionEntrenamiento" as Sesion
+participant "dao : SesionEntrenamientoDAO" as DAO
+participant "bd : ConexionBD" as BD
+
+Cliente -> Vista : 1: registrarSesion()
+activate Vista
+
+Vista -> Ctrl : 1.1: registrar_sesion(id_cliente, duracion, intensidad, calorias)
+activate Ctrl
+
+Ctrl -> Sesion : 1.1.1: new(...)
+activate Sesion
+Sesion --> Ctrl : 1.1.2: objeto_sesion
+deactivate Sesion
+
+Ctrl -> DAO : 1.1.3: guardar(sesion)
+activate DAO
+
+DAO -> BD : 1.1.3.1: ejecutar_actualizacion(INSERT)
+activate BD
+BD --> DAO : 1.1.3.2: id_sesion
+deactivate BD
+
+DAO --> Ctrl : 1.1.4: True
+deactivate DAO
+
+Ctrl --> Vista : 1.2: confirmacion
+deactivate Ctrl
+
+Vista --> Cliente : 1.3: mostrar_mensaje("Sesion registrada")
+deactivate Vista
+
+@enduml

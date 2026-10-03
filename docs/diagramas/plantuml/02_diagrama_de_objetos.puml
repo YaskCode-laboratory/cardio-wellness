@@ -1,0 +1,67 @@
+@startuml Objetos
+title Diagrama de Objetos - Sistema Cardio-Wellness
+
+object "admin1 : Administrador" as admin1 {
+    id_usuario = 448
+    nombre = "Admin Sistema"
+    correo = "admin@cardio.com"
+}
+
+object "cliente1 : Cliente" as cliente1 {
+    id_usuario = 3152
+    nombre = "Juan Perea"
+    peso = 78.00
+    altura = 1.80
+    objetivo = "Mantener peso"
+    peso_objetivo = 78.00
+}
+
+object "rutina1 : Rutina" as rutina1 {
+    id_rutina = 643
+    nombre = "Cardio Mantenimiento"
+    nivel = AVANZADO
+    duracion_semanas = 8
+}
+
+object "ej1 : EjercicioCardio" as ej1 {
+    id_ejercicio = 635
+    nombre = "Caminata"
+    tipo = "LISS"
+    intensidad = MEDIA
+    duracion_minutos = 6
+}
+
+object "asignacion1 : AsignacionRutina" as asignacion1 {
+    id_asignacion = 255
+    fecha_asignacion = "2026-09-22"
+    estado = ACTIVA
+}
+
+object "sesion1 : SesionEntrenamiento" as sesion1 {
+    id_sesion = 15429
+    fecha = "2026-09-22"
+    duracion_real = 12
+    intensidad_real = MEDIA
+    calorias_quemadas = 30.00
+}
+
+object "progreso1 : ProgresoMensual" as progreso1 {
+    id_progreso = 160
+    mes = "2026-09-01"
+    peso = 78.00
+    porcentaje_cumplimiento = 33.33
+}
+
+object "conexion : ConexionBD" as conexion {
+    estado = "Conectado"
+    motor = "PostgreSQL"
+}
+
+admin1 -- rutina1 : crea
+cliente1 -- asignacion1 : tiene
+asignacion1 -- rutina1 : asigna
+rutina1 -- ej1 : contiene
+cliente1 -- sesion1 : registra
+cliente1 -- progreso1 : tiene
+
+@enduml

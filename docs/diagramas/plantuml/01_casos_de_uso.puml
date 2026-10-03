@@ -1,0 +1,62 @@
+@startuml Casos_De_Uso
+title Diagrama de Casos de Uso - Sistema Cardio-Wellness
+left to right direction
+skinparam packageStyle rectangle
+skinparam nodesep 50
+skinparam ranksep 60
+skinparam linetype ortho
+
+actor "Cliente" as Cliente
+actor "Administrador" as Admin
+
+rectangle "Sistema Cardio-Wellness" {
+
+    ' ==== Casos comunes (arriba) ====
+    together {
+        usecase "Iniciar Sesión" as UC01
+        usecase "Cerrar Sesión" as UC02
+    }
+
+    ' ==== Casos exclusivos del Administrador ====
+    together {
+        usecase "Registrar Cliente" as UC03
+        usecase "Gestionar Rutinas" as UC04
+        usecase "Gestionar Ejercicios" as UC05
+        usecase "Asignar Rutina" as UC06
+        usecase "Ver Progreso de Clientes" as UC07
+    }
+
+    ' ==== Casos exclusivos del Cliente ====
+    together {
+        usecase "Consultar Rutina Activa" as UC08
+        usecase "Registrar Sesión Entrenamiento" as UC09
+        usecase "Consultar Progreso Personal" as UC10
+        usecase "Ver Parámetro META" as UC11
+        usecase "Exportar Reporte PDF" as UC12
+    }
+}
+
+' ===== Conexiones del Administrador =====
+Admin --> UC01
+Admin --> UC02
+Admin --> UC03
+Admin --> UC04
+Admin --> UC05
+Admin --> UC06
+Admin --> UC07
+
+' ===== Conexiones del Cliente =====
+Cliente --> UC01
+Cliente --> UC02
+Cliente --> UC08
+Cliente --> UC09
+Cliente --> UC10
+Cliente --> UC11
+Cliente --> UC12
+
+' ===== Relaciones <<include>> =====
+UC03 ..> UC05 : <<include>>
+UC06 ..> UC04 : <<include>>
+UC10 ..> UC11 : <<include>>
+
+@enduml

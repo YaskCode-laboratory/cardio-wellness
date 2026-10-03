@@ -1,0 +1,23 @@
+@startuml Colaboracion
+title Diagrama de Colaboración - Registrar Sesión de Entrenamiento
+skinparam Style strictuml
+
+object "Cliente : Usuario" as Cliente
+object "vista : InterfazRegistroSesion" as Vista
+object "ctrl : ControlSesiones" as Ctrl
+object "sesion : SesionEntrenamiento" as Sesion
+object "dao : SesionEntrenamientoDAO" as DAO
+object "bd : ConexionBD" as BD
+
+Cliente --> Vista : 1: registrarSesion()
+Vista --> Ctrl : 1.1: registrar_sesion()
+Ctrl --> Sesion : 1.1.1: new()
+Sesion --> Ctrl : 1.1.2: objeto_sesion
+Ctrl --> DAO : 1.1.3: guardar(sesion)
+DAO --> BD : 1.1.3.1: ejecutar_actualizacion()
+BD --> DAO : 1.1.3.2: id_sesion
+DAO --> Ctrl : 1.1.4: True
+Ctrl --> Vista : 1.2: confirmacion
+Vista --> Cliente : 1.3: mostrar_mensaje()
+
+@enduml

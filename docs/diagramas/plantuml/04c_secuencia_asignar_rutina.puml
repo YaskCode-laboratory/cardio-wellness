@@ -1,0 +1,54 @@
+@startuml Secuencia_Asignar_Rutina
+title Diagrama de Secuencia - Asignar Rutina a Cliente
+autonumber
+skinparam Style strictuml
+
+actor "Administrador" as Admin
+participant "vista : InterfazGestionRutinas" as Vista
+participant "ctrl : ControlRutinas" as Ctrl
+participant "asigDao : AsignacionRutinaDAO" as AsigDAO
+participant "bd : ConexionBD" as BD
+
+Admin -> Vista : 1: asignarRutina()
+activate Vista
+
+Vista -> Ctrl : 1.1: asignar_rutina(idCliente, idRutina)
+activate Ctrl
+
+Ctrl -> AsigDAO : 1.1.1: buscar_activa(idCliente)
+activate AsigDAO
+AsigDAO -> BD : 1.1.1.1: ejecutar_consulta(SELECT...)
+activate BD
+BD --> AsigDAO : 1.1.1.2: asignacion_activa o None
+deactivate BD
+AsigDAO --> Ctrl : 1.1.2: asignacion_activa
+deactivate AsigDAO
+
+alt cliente tiene asignacion activa
+    Ctrl -> AsigDAO : 1.1.3: actualizar(estado=FINALIZADA)
+    activate AsigDAO
+    AsigDAO -> BD : 1.1.3.1: ejecutar_actualizacion(UPDATE...)
+    activate BD
+    BD --> AsigDAO : 1.1.3.2: True
+    deactivate BD
+    AsigDAO --> Ctrl : 1.1.3.3: asignacion_finalizada
+    deactivate AsigDAO
+end
+
+Ctrl -> AsigDAO : 1.1.4: guardar(nueva_asignacion)
+activate AsigDAO
+AsigDAO -> BD : 1.1.4.1: ejecutar_actualizacion(INSERT...)
+activate BD
+BD --> AsigDAO : 1.1.4.2: id_asignacion
+deactivate BD
+AsigDAO --> Ctrl : 1.1.5: True
+deactivate AsigDAO
+
+Ctrl -> Ctrl : 1.1.6: registrar_log("ASIGNACION_RUTINA")
+Ctrl --> Vista : 1.2: True
+deactivate Ctrl
+
+Vista --> Admin : 1.3: mostrar_mensaje("Rutina asignada")
+deactivate Vista
+
+@enduml

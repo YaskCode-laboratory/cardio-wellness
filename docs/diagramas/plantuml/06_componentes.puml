@@ -1,0 +1,56 @@
+@startuml Componentes
+title Diagrama de Componentes - Sistema Cardio-Wellness
+skinparam componentStyle uml2
+
+package "Capa de Presentación" {
+    component [Interfaz Tkinter] as UI
+    component [InterfazLogin] as UI_Login
+    component [InterfazAdmin] as UI_Admin
+    component [InterfazCliente] as UI_Cliente
+}
+
+package "Capa de Control" {
+    component [ControlAutenticacion] as Ctrl_Auth
+    component [ControlClientes] as Ctrl_Cli
+    component [ControlRutinas] as Ctrl_Rut
+    component [ControlEjercicios] as Ctrl_Ej
+    component [ControlSesiones] as Ctrl_Ses
+    component [ControlProgreso] as Ctrl_Prog
+}
+
+package "Capa de Dominio" {
+    component [Modelos POO] as Dominio
+}
+
+package "Capa de Persistencia" {
+    component [DAOs] as DAO
+    component [ConexionBD Singleton] as BD
+}
+
+database "PostgreSQL" as DB
+
+UI --> Ctrl_Auth
+UI --> Ctrl_Cli
+UI --> Ctrl_Rut
+UI --> Ctrl_Ej
+UI --> Ctrl_Ses
+UI --> Ctrl_Prog
+
+Ctrl_Auth --> Dominio
+Ctrl_Cli --> Dominio
+Ctrl_Rut --> Dominio
+Ctrl_Ej --> Dominio
+Ctrl_Ses --> Dominio
+Ctrl_Prog --> Dominio
+
+Ctrl_Auth --> DAO
+Ctrl_Cli --> DAO
+Ctrl_Rut --> DAO
+Ctrl_Ej --> DAO
+Ctrl_Ses --> DAO
+Ctrl_Prog --> DAO
+
+DAO --> BD
+BD --> DB
+
+@enduml
