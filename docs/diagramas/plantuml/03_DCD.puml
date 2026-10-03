@@ -1,0 +1,411 @@
+title Sistema de Gestión Cardio-Wellness (DCD)
+
+skinparam classAttributeIconSize 0
+hide empty members
+scale 0.7
+left to right direction
+
+package "Dominio" {
+
+abstract class Usuario {
+    -idUsuario : int
+    -nombre : String
+    -apellido : String
+    -correoElectronico : String
+    -contrasenia : String
+    -edad : int
+    --
+    +actualizarDatosPersonales(nombre:String, apellido:String, correo:String, edad:int): void
+    +cambiarContrasenia(contraseniaActual:String, nuevaContrasenia:String): boolean
+    +obtenerNombreCompleto(): String
+    +obtenerTipoUsuario(): String
+}
+
+class Cliente {
+    -peso : float
+    -altura : float
+    -objetivo : String
+    -fechaIngreso : Date
+    --
+    +actualizarPeso(nuevoPeso:float): void
+    +actualizarObjetivo(nuevoObjetivo:String): void
+    +obtenerTipoUsuario(): String
+}
+
+class Administrador {
+    +obtenerTipoUsuario(): String
+}
+
+class Rutina {
+    -idRutina : int
+    -nombre : String
+    -descripcion : String
+    -objetivo : String
+    -nivel : NivelRutina
+    -duracionSemanas : int
+    --
+    +agregarEjercicio(ejercicio:EjercicioCardio): void
+    +eliminarEjercicio(ejercicio:EjercicioCardio): void
+    +calcularDuracionTotal(): int
+}
+
+class EjercicioCardio {
+    -idEjercicio : int
+    -nombre : String
+    -descripcion : String
+    -tipo : String
+    -duracionMinutos : int
+    -intensidad : Intensidad
+    -caloriasEstimadas : float
+    --
+    +calcularCalorias(): float
+}
+
+class SesionEntrenamiento {
+    -idSesion : int
+    -fecha : Date
+    -duracionReal : int
+    -intensidadReal : Intensidad
+    -caloriasQuemadas : float
+    -observaciones : String
+    -completada : boolean
+    --
+    +registrarResultado(): void
+    +obtenerResumen(): String
+    +marcarComoCompletada(): void
+}
+
+class ProgresoMensual {
+    -idProgreso : int
+    -mes : Date
+    -peso : float
+    -sesionesCompletadas : int
+    -sesionesPlanificadas : int
+    -porcentajeCumplimiento : float
+    --
+    +calcularCumplimiento(): float
+    +actualizarProgreso(): void
+    +generarResumen(): String
+}
+
+class AsignacionRutina {
+    -idAsignacion : int
+    -fechaAsignacion : Date
+    -fechaFinalizacion : Date
+    -estado : EstadoAsignacion
+    -observaciones : String
+    --
+    +activar(): void
+    +finalizar(): void
+    +cancelar(): void
+    +estaActiva(): boolean
+}
+
+enum EstadoAsignacion {
+    ACTIVA
+    FINALIZADA
+    CANCELADA
+}
+
+enum NivelRutina {
+    BASICO
+    INTERMEDIO
+    AVANZADO
+}
+
+enum Intensidad {
+    BAJA
+    MEDIA
+    ALTA
+}
+Usuario <|-- Cliente
+Usuario <|-- Administrador
+
+Administrador "1" --> "0..*" Cliente : administra
+Administrador "1" --> "0..*" Rutina : gestiona
+Administrador "1" --> "0..*" EjercicioCardio : administra
+
+AsignacionRutina "0..*" --> "1" Rutina : asigna
+Rutina "1" o-- "1..*" EjercicioCardio : contiene
+
+Cliente "1" *-- "0..*" AsignacionRutina : tiene
+Cliente "1" *-- "0..*" SesionEntrenamiento : registra
+Cliente "1" *-- "0..*" ProgresoMensual : tiene
+
+}
+
+package "Interfaz" {
+
+abstract class InterfazBase {
+    +mostrarMensaje(mensaje:String): void
+    +mostrarError(mensaje:String): void
+    +confirmarAccion(mensaje:String): boolean
+}
+
+class InterfazLogin {
+    -correo : String
+    -contrasenia : String
+    --
+    +mostrarFormulario(): void
+    +capturarCredenciales(): void
+    +iniciarSesion(): void
+}
+
+class InterfazAdministrador {
+    -administradorActual : Administrador
+    --
+    +mostrarMenuPrincipal(): void
+    +abrirGestionClientes(): void
+    +abrirGestionRutinas(): void
+    +abrirGestionEjercicios(): void
+    +cerrarSesion(): void
+}
+
+class InterfazCliente {
+    -clienteActual : Cliente
+    --
+    +mostrarInicio(): void
+    +consultarRutinaActiva(): void
+    +consultarProgreso(): void
+    +registrarSesion(): void
+    +exportarReporte(): void
+    +cerrarSesion(): void
+}
+
+class InterfazGestionClientes {
+    +mostrarClientes(): void
+    +mostrarFormularioCliente(): void
+    +registrarCliente(): void
+    +editarCliente(): void
+    +eliminarCliente(): void
+    +buscarCliente(): void
+}
+
+class InterfazGestionRutinas {
+    +mostrarRutinas(): void
+    +mostrarFormularioRutina(): void
+    +crearRutina(): void
+    +editarRutina(): void
+    +eliminarRutina(): void
+    +asignarRutina(): void
+}
+
+class InterfazGestionEjercicios {
+    +mostrarEjercicios(): void
+    +mostrarFormularioEjercicio(): void
+    +crearEjercicio(): void
+    +editarEjercicio(): void
+    +eliminarEjercicio(): void
+    +buscarEjercicio(): void
+}
+
+class InterfazRegistroSesion {
+    +mostrarFormularioSesion(): void
+    +registrarSesion(): void
+    +cancelarRegistro(): void
+}
+
+class InterfazProgreso {
+    +mostrarProgresoMensual(): void
+    +mostrarHistorial(): void
+    +mostrarResumen(): void
+}
+
+InterfazBase <|-- InterfazLogin
+InterfazBase <|-- InterfazAdministrador
+InterfazBase <|-- InterfazCliente
+InterfazBase <|-- InterfazGestionClientes
+InterfazBase <|-- InterfazGestionRutinas
+InterfazBase <|-- InterfazGestionEjercicios
+InterfazBase <|-- InterfazRegistroSesion
+InterfazBase <|-- InterfazProgreso
+
+}
+
+package "Control" {
+
+abstract class ControlBase {
+    #rutaLog : String
+    --
+    #_registrarLog(usuario:String, accion:String): void
+}
+
+class ControlAutenticacion {
+    +iniciarSesion(correo:String, contrasenia:String): Usuario
+    +cerrarSesion(): void
+    +validarCredenciales(correo:String, contrasenia:String): boolean
+}
+
+class ControlClientes {
+    +registrarCliente(nombre:String, apellido:String, correo:String, contrasenia:String, edad:int, peso:float, altura:float, objetivo:String): Cliente
+    +actualizarCliente(cliente:Cliente): boolean
+    +eliminarCliente(idCliente:int): boolean
+    +buscarCliente(idCliente:int): Cliente
+    +listarClientes(): List<Cliente>
+}
+
+class ControlRutinas {
+    +crearRutina(rutina:Rutina): boolean
+    +actualizarRutina(rutina:Rutina): boolean
+    +eliminarRutina(idRutina:int): boolean
+    +buscarRutina(idRutina:int): Rutina
+    +listarRutinas(): List<Rutina>
+    +asignarRutina(idCliente:int, idRutina:int): boolean
+}
+
+class ControlEjercicios {
+    +crearEjercicio(ejercicio:EjercicioCardio): boolean
+    +actualizarEjercicio(ejercicio:EjercicioCardio): boolean
+    +eliminarEjercicio(idEjercicio:int): boolean
+    +buscarEjercicio(idEjercicio:int): EjercicioCardio
+    +listarEjercicios(): List<EjercicioCardio>
+}
+
+class ControlSesiones {
+    +registrarSesion(idCliente:int, duracion:int, intensidad:String, calorias:float): boolean
+    +obtenerSesionesCliente(cliente:Cliente): List<SesionEntrenamiento>
+    +eliminarSesion(idSesion:int): boolean
+}
+
+class ControlProgreso {
+    +generarProgreso(cliente:Cliente): ProgresoMensual
+    +consultarProgreso(cliente:Cliente): List<ProgresoMensual>
+    +calcularResumenCliente(idCliente:int): Map
+}
+
+ControlBase <|-- ControlAutenticacion
+ControlBase <|-- ControlClientes
+ControlBase <|-- ControlRutinas
+ControlBase <|-- ControlEjercicios
+ControlBase <|-- ControlSesiones
+ControlBase <|-- ControlProgreso
+
+InterfazLogin ..> ControlAutenticacion
+InterfazGestionClientes ..> ControlClientes
+InterfazGestionRutinas ..> ControlRutinas
+InterfazGestionEjercicios ..> ControlEjercicios
+InterfazRegistroSesion ..> ControlSesiones
+InterfazProgreso ..> ControlProgreso
+
+ControlAutenticacion ..> Usuario
+ControlClientes ..> Cliente
+ControlRutinas ..> Rutina
+ControlRutinas ..> AsignacionRutina
+ControlEjercicios ..> EjercicioCardio
+ControlSesiones ..> SesionEntrenamiento
+ControlProgreso ..> ProgresoMensual
+
+}
+
+package "Servicios" {
+
+class GestorSeguridad <<utility>> {
+    +{static} generarHash(contrasenia:String): String
+    +{static} verificarContrasenia(contrasenia:String, hash:String): boolean
+}
+
+class GeneradorReportesPDF <<utility>> {
+    +generarReporteProgresoCliente(cliente:Cliente, resumen:Map, historial:List): String
+}
+
+class SistemaWellness {
+    +evaluarObjetivoYSugerirRutina(cliente:Cliente): Rutina
+    +calcularDiferenciaPesoMensual(idCliente:int): float
+    +emitirReportePDFCliente(cliente:Cliente): String
+}
+
+ControlClientes ..> GestorSeguridad
+ControlAutenticacion ..> GestorSeguridad
+SistemaWellness ..> ControlClientes
+SistemaWellness ..> ControlRutinas
+SistemaWellness ..> ControlProgreso
+SistemaWellness ..> GeneradorReportesPDF
+
+}
+
+package "Persistencia" {
+
+class ConexionBD <<Singleton>> {
+    +{static} obtenerInstancia(): ConexionBD
+    +abrirConexion(): void
+    +cerrarConexion(): void
+    +ejecutarConsulta(sql:String, parametros:Tuple): List<Map>
+    +ejecutarActualizacion(sql:String, parametros:Tuple): boolean
+}
+
+class UsuarioDAO {
+    +iniciarSesion(correo:String, contrasenia:String): Usuario
+    +buscarPorCorreo(correo:String): Usuario
+    +guardar(usuario:Usuario, contraseniaPlana:String): Usuario
+    +actualizar(usuario:Usuario): boolean
+    +eliminarPorId(idUsuario:int): boolean
+}
+
+class ClienteDAO {
+    +guardar(cliente:Cliente): Cliente
+    +actualizar(cliente:Cliente): Cliente
+    +eliminarPorId(idCliente:int): boolean
+    +buscarPorId(idCliente:int): Cliente
+    +buscarPorCorreo(correo:String): Cliente
+    +listar(): List<Cliente>
+}
+
+class RutinaDAO {
+    +guardar(rutina:Rutina): Rutina
+    +actualizar(rutina:Rutina): Rutina
+    +eliminarPorId(idRutina:int): boolean
+    +buscarPorId(idRutina:int): Rutina
+    +listar(): List<Rutina>
+    +agregarEjercicio(idRutina:int, idEjercicio:int, orden:int): boolean
+    +eliminarEjercicio(idRutina:int, idEjercicio:int): boolean
+}
+
+class EjercicioDAO {
+    +guardar(ejercicio:EjercicioCardio): EjercicioCardio
+    +actualizar(ejercicio:EjercicioCardio): EjercicioCardio
+    +eliminarPorId(idEjercicio:int): boolean
+    +buscarPorId(idEjercicio:int): EjercicioCardio
+    +listar(): List<EjercicioCardio>
+}
+
+class SesionEntrenamientoDAO {
+    +guardar(sesion:SesionEntrenamiento): SesionEntrenamiento
+    +actualizar(sesion:SesionEntrenamiento): SesionEntrenamiento
+    +eliminarPorId(idSesion:int): boolean
+    +buscarPorId(idSesion:int): SesionEntrenamiento
+    +listarPorCliente(idCliente:int): List<SesionEntrenamiento>
+}
+
+class ProgresoMensualDAO {
+    +guardar(progreso:ProgresoMensual): ProgresoMensual
+    +actualizar(progreso:ProgresoMensual): ProgresoMensual
+    +buscarPorCliente(idCliente:int): List<ProgresoMensual>
+}
+
+class AsignacionRutinaDAO {
+    +guardar(asignacion:AsignacionRutina): AsignacionRutina
+    +actualizar(asignacion:AsignacionRutina): AsignacionRutina
+    +buscarActiva(idCliente:int): AsignacionRutina
+    +listarHistorial(idCliente:int): List<AsignacionRutina>
+    +eliminarPorId(idAsignacion:int): boolean
+}
+
+ControlAutenticacion ..> UsuarioDAO
+ControlClientes ..> ClienteDAO
+ControlRutinas ..> RutinaDAO
+ControlRutinas ..> AsignacionRutinaDAO
+ControlEjercicios ..> EjercicioDAO
+ControlSesiones ..> SesionEntrenamientoDAO
+ControlProgreso ..> ProgresoMensualDAO
+
+UsuarioDAO ..> ConexionBD
+ClienteDAO ..> ConexionBD
+RutinaDAO ..> ConexionBD
+EjercicioDAO ..> ConexionBD
+SesionEntrenamientoDAO ..> ConexionBD
+ProgresoMensualDAO ..> ConexionBD
+AsignacionRutinaDAO ..> ConexionBD
+
+}
+
+@enduml
