@@ -27,7 +27,7 @@ CREATE TABLE usuarios (
     edad INTEGER NOT NULL CHECK (edad > 0),
     tipo_usuario tipo_usuario NOT NULL DEFAULT 'cliente',
     fecha_registro DATE NOT NULL DEFAULT CURRENT_DATE
-)
+);
 
 COMMENT ON TABLE usuarios IS 'Base de la herencia: Usuario (abstracta en Python)';
 COMMENT ON COLUMN usuarios.contrasenia_hash IS 'Almacena el hash de la contraseña';
@@ -269,134 +269,34 @@ COMMENT ON VIEW vw_progreso_cliente IS 'Vista para mostrar el progreso con nivel
 -- ============================================================
 
 -- Insertar un administrador (id_usuario = 1)
-INSERT INTO usuarios (nombre, apellido, correo_electronico, contrasenia_hash, edad, tipo_usuario)
-VALUES ('Laura', 'Gomez', 'admin@cardiowellness.com', 'hash_dummy_123', 30, 'administrador');
-
 -- Insertar un administrador en la tabla específica
-INSERT INTO administradores (id_usuario) VALUES (1);
-
 -- Insertar clientes
-INSERT INTO usuarios (nombre, apellido, correo_electronico, contrasenia_hash, edad, tipo_usuario)
-VALUES 
-    ('Carlos', 'Perez', 'carlos@gmail.com', 'hash_dummy_456', 28, 'cliente'),
-    ('Ana', 'Gomez', 'ana@gmail.com', 'hash_dummy_789', 25, 'cliente'),
-    ('Galia', 'Gonzalez', 'galia@gmail.com', 'hash_dummy_1234', 22, 'cliente'),
-    ('Hector', 'Horcadela', 'hector@gmail.com', 'hash_dummy_1245', 21, 'cliente');
-
-INSERT INTO clientes (id_usuario, peso, altura, objetivo, fecha_ingreso)
-VALUES 
-    (2, 82.5, 1.75, 'Bajar de peso', '2026-01-15'),
-    (3, 65.0, 1.65, 'Mejorar resistencia', '2026-02-01'),
-    (4, 63.0, 1.70, 'Mejorar resistencia', '2026-03-15'),
-    (5, 60.0, 1.72, 'Mantener condicion', '2026-08-15');
-
 -- ============================================================
 -- Datos de Prueba: Insertar ejercicios (Calorias sin verificar, solo ejemplo)
 -- ============================================================
-INSERT INTO ejercicios (nombre, descripcion, tipo, duracion_minutos, intensidad, calorias_estimadas, creado_por)
-VALUES 
-    ('Caminata Rapida', 'Marcha rapida al aire libre o caminadora', 'LISS', 30, 'BAJA', 150.0, 1),
-    ('Trote Continuo', 'Trote a ritmo constante', 'LISS', 25, 'MEDIA', 250.0, 1),
-    ('Bicicleta Estatica', 'Pedaleo en bicicleta estatica', 'LISS', 20, 'MEDIA', 190.0, 1),
-    ('Saltar la Cuerda', 'Salto continuo con cuerda', 'HIIT', 15, 'ALTA', 280.0, 1),
-    ('Circuito Funcional', 'Circuito de 8 estaciones, 45s por estacion', 'HIIT', 25, 'ALTA', 350.0, 1),
-    ('HIIT de Bajo Impacto', 'Version sin saltos de HIIT, ideal para principiantes. Incluye sentadillas sin salto, zancadas, planchas y pasos laterales.', 'HIIT', 20, 'MEDIA', 220.0, 1);
-
 -- ============================================================
 -- Datos de Prueba: Insertar rutinas
 -- ============================================================
-INSERT INTO rutinas (nombre, descripcion, objetivo, nivel, duracion_semanas, creado_por)
-VALUES
-    ('Quema Grasa Basica', 'Rutina suave para empezar con ejercicios de baja intensidad', 'Bajar de peso', 'BASICO', 4, 1),
-    ('Quema Grasa Intensa', 'Rutina enfocada en pérdida de peso con ejercicios HIIT y LISS', 'Bajar de peso', 'INTERMEDIO', 4, 1),
-    ('Resistencia Cardio', 'Rutina para mejorar capacidad cardiovascular con ejercicios de media intensidad', 'Mejorar resistencia', 'BASICO', 6, 1),
-    ('Resistencia Intermedia', 'Rutina para aumentar capacidad cardiovascular con intensidad media-alta', 'Mejorar resistencia', 'INTERMEDIO', 6, 1),
-    ('Mantenimiento Basico', 'Rutina ligera para mantener condición física sin esfuerzo excesivo', 'Mantener condicion', 'BASICO', 8, 1),
-    ('Mantenimiento Activo', 'Rutina para mantener condición física con ejercicios variados y de bajo impacto', 'Mantener condicion', 'BASICO', 8, 1);
-
 -- ============================================================
 -- Datos de prueba: Asignacion de ejercicios a rutinas (Agregacion)
 -- ============================================================
 
 -- Quema Grasa Básica (1)
-INSERT INTO rutina_ejercicios (id_rutina, id_ejercicio, orden_ejercicio)
-VALUES (1, 1, 1), (1, 6, 2), (1, 3, 3);
-
 -- Quema Grasa Intensa (2)
-INSERT INTO rutina_ejercicios (id_rutina, id_ejercicio, orden_ejercicio)
-VALUES (2, 1, 1), (2, 2, 2), (2, 4, 3), (2, 5, 4);
-
 -- Resistencia Cardio (3)
-INSERT INTO rutina_ejercicios (id_rutina, id_ejercicio, orden_ejercicio)
-VALUES (3, 2, 1), (3, 3, 2), (3, 6, 3);
-
 -- Resistencia Intermedia (4)
-INSERT INTO rutina_ejercicios (id_rutina, id_ejercicio, orden_ejercicio)
-VALUES (4, 2, 1), (4, 5, 2), (4, 4, 3), (4, 1, 4);
-
 -- Mantenimiento Básico (5)
-INSERT INTO rutina_ejercicios (id_rutina, id_ejercicio, orden_ejercicio)
-VALUES (5, 1, 1), (5, 3, 2), (5, 6, 3);
-
 -- Mantenimiento Activo (6)
-INSERT INTO rutina_ejercicios (id_rutina, id_ejercicio, orden_ejercicio)
-VALUES (6, 3, 1), (6, 6, 2), (6, 1, 3), (6, 2, 4);
-
 -- Asignar rutinas a clientes (composicion)
-INSERT INTO asignaciones_rutina (id_cliente, id_rutina, fecha_asignacion, estado)
-VALUES 
-    (2, 2, '2026-08-01', 'ACTIVA'),   -- Carlos con Quema Grasa Intensa
-    (3, 4, '2026-08-15', 'ACTIVA'),   -- Ana con Resistencia Intermedia
-    (4, 3, '2026-08-20', 'ACTIVA'),   -- Galia con Resistencia Cardio
-    (5, 6, '2026-09-01', 'ACTIVA');   -- Héctor con Mantenimiento Activo
+-- Héctor con Mantenimiento Activo
 
 -- ============================================================
 -- Datos de prueba: Insertar sesiones de entrenamiento
 -- ============================================================
-INSERT INTO sesiones_entrenamiento (id_cliente, fecha, duracion_real, intensidad_real, calorias_quemadas, observaciones, completada)
-VALUES 
-    -- Carlos (id_cliente = 2) con Quema Grasa Intensa
-    (2, '2026-08-03', 45, 'ALTA', 380.0, 'Buena sesión, completó todo el circuito', TRUE),
-    (2, '2026-08-10', 40, 'MEDIA', 310.0, 'Regular, se sintió con poca energía', TRUE),
-    (2, '2026-08-17', 50, 'ALTA', 420.0, 'Excelente, mejoró tiempos', TRUE),
-    (2, '2026-08-24', 35, 'ALTA', 290.0, 'Corta pero intensa', TRUE),
-
-    -- Ana (id_cliente = 3) con Resistencia Intermedia
-    (3, '2026-08-18', 45, 'ALTA', 370.0, 'Muy bien, ritmo constante', TRUE),
-    (3, '2026-08-25', 40, 'MEDIA', 290.0, 'Bien, sin complicaciones', TRUE),
-    (3, '2026-09-01', 50, 'ALTA', 410.0, 'Excelente, mejoró resistencia', TRUE),
-
-    -- Galia (id_cliente = 4) con Resistencia Cardio
-    (4, '2026-08-22', 35, 'MEDIA', 250.0, 'Buena sesión, ritmo adecuado', TRUE),
-    (4, '2026-08-29', 40, 'MEDIA', 280.0, 'Bien, se sintió con energía', TRUE),
-    (4, '2026-09-05', 30, 'BAJA', 190.0, 'Ligera, solo por mantenerse activa', TRUE),
-
-    -- Héctor (id_cliente = 5) con Mantenimiento Activo
-    (5, '2026-09-02', 25, 'BAJA', 160.0, 'Primera sesión, bien', TRUE),
-    (5, '2026-09-09', 30, 'MEDIA', 220.0, 'Buena, se sintió cómodo', TRUE),
-    (5, '2026-09-16', 20, 'BAJA', 140.0, 'Sesión corta, sin problemas', TRUE);
-
 -- ============================================================
 -- Datos de Prueba: Insertar progreso mensual
 -- ============================================================
-
-INSERT INTO progreso_mensual (id_cliente, mes, peso, sesiones_completadas, sesiones_planificadas, porcentaje_cumplimiento)
-VALUES
--- Carlos (id_cliente = 2) → Bajar de peso
-(2, '2026-08-01', 82.5, 4, 4, 100.0),   -- Agosto: completó todas las sesiones planificadas
-(2, '2026-09-01', 80.0, 0, 4, 0.0),     -- Septiembre: aún no registra sesiones
-
--- Ana (id_cliente = 3) → Mejorar resistencia
-(3, '2026-08-01', 65.0, 2, 4, 50.0),    -- Agosto: 2 de 4 sesiones
-(3, '2026-09-01', 64.5, 1, 4, 25.0),    -- Septiembre: 1 de 4 sesiones
-
--- Galia (id_cliente = 4) → Mejorar resistencia
-(4, '2026-08-01', 63.0, 2, 4, 50.0),    -- Agosto: 2 de 4 sesiones
-(4, '2026-09-01', 62.0, 1, 4, 25.0),    -- Septiembre: 1 de 4 sesiones
-
--- Héctor (id_cliente = 5) → Mantener condición
-(5, '2026-08-01', 60.0, 0, 0, 0.0),     -- Agosto: recién ingresó, sin sesiones planificadas
-(5, '2026-09-01', 60.0, 3, 4, 75.0);    -- Septiembre: 3 de 4 sesiones
+-- Septiembre: 3 de 4 sesiones
 
 -- ============================================================
 -- FIN DEL SCRIPT

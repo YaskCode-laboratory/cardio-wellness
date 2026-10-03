@@ -62,3 +62,13 @@ database/*.db-shm
 database/*.db-wal
 logs/*.txt
 resultado_pruebas_*.txt
+
+
+# Copias temporales
+*.bak
+
+# Respaldos y exportaciones de PostgreSQL
+backups/
+database/cardio_wellness.sql
+*.dump
+*.backup
