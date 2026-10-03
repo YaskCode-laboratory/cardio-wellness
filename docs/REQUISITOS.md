@@ -160,7 +160,7 @@ Los requisitos funcionales se organizan por módulo.
 
 | ID | Requisito | Prioridad |
 |:---:|:---|:---:|
-| RF-13 | El Administrador debe poder crear ejercicios con: nombre, descripción, tipo, duración, intensidad y calorías estimadas. | 🔴 Alta |
+| RF-13 | El Administrador debe poder crear ejercicios con: nombre, descripción, tipo, duración, intensidad y calorías estimadas. | Alta |
 | RF-14 | El sistema debe validar que la duración > 0 y las calorías >= 0. | Alta |
 | RF-15 | El Administrador debe poder clasificar ejercicios por tipo: LISS, HIIT, Cardio Funcional. | Alta |
 | RF-16 | El Administrador debe poder editar ejercicios existentes. | Media |
@@ -416,7 +416,7 @@ El sistema maneja **8 entidades principales**:
 | Especificación de requisitos | `docs/REQUISITOS.md` | Este documento |
 | Casos de Uso | `docs/diagramas/plantuml/01_casos_de_uso.puml` | 12 casos de uso |
 | DCD | `docs/diagramas/plantuml/03_DCD.puml` | Todas las clases |
-| Base de Datos | `sql/cardio_wellness.sql` | 8 tablas + enums |
+| Base de Datos | `sql/schema.sql` | 8 tablas + enums |
 | Documentación por capa | `docs/DOC_*.txt` | Documentación técnica |
 
 ---
