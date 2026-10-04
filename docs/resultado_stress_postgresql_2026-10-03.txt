@@ -1,0 +1,37 @@
+﻿✅ Pool de conexiones inicializado (1-30 conexiones)
+
+📝 Creando 100 clientes de prueba...
+✅ 100 clientes de prueba creados
+
+============================================================
+PRUEBA DE ESTRÉS - CARDIO-WELLNESS (PostgreSQL)
+============================================================
+Base de datos: cardio_wellness_prueba_limpieza@localhost:5432
+Usuarios concurrentes: 30
+Clientes de prueba: 100
+Duración: 40 segundos
+============================================================
+
+[18:35:18] Iniciando 30 usuarios concurrentes...
+
+
+============================================================
+RESULTADOS DE LA PRUEBA DE ESTRÉS
+============================================================
+Tiempo total: 40.19 segundos
+Operaciones totales: 10792
+Exitosas: 10792
+Fallidas: 0
+Tasa de éxito: 100.00%
+
+Rendimiento:
+  - Ops/segundo: 268.54
+  - Avg response: 25.27 ms
+  - Max response: 759.83 ms
+  - Min response: 0.33 ms
+============================================================
+
+⚠️ RESULTADO: ACEPTABLE - La concurrencia funciona, pero se recomiendan optimizaciones adicionales.
+
+🧹 Limpiando 100 clientes de prueba...
+✅ Clientes de prueba eliminados

@@ -1,0 +1,36 @@
+﻿COLUMNAS PRESENTES EN PRINCIPAL Y AUSENTES EN PRUEBA
+================================================================================
+FALTA: asignacion_rutina_ejercicios.activo -> {'tipo': 'boolean', 'longitud': None, 'precision': None, 'escala': None, 'nulo': 'NO', 'default': 'true'}
+FALTA: asignacion_rutina_ejercicios.fecha_agregado -> {'tipo': 'date', 'longitud': None, 'precision': None, 'escala': None, 'nulo': 'NO', 'default': 'CURRENT_DATE'}
+FALTA: asignacion_rutina_ejercicios.id_asignacion -> {'tipo': 'integer', 'longitud': None, 'precision': 32, 'escala': 0, 'nulo': 'NO', 'default': None}
+FALTA: asignacion_rutina_ejercicios.id_asignacion_ejercicio -> {'tipo': 'integer', 'longitud': None, 'precision': 32, 'escala': 0, 'nulo': 'NO', 'default': "nextval('asignacion_rutina_ejercicios_id_asignacion_ejercicio_seq'::regclass)"}
+FALTA: asignacion_rutina_ejercicios.id_ejercicio -> {'tipo': 'integer', 'longitud': None, 'precision': 32, 'escala': 0, 'nulo': 'NO', 'default': None}
+FALTA: asignacion_rutina_ejercicios.orden_ejercicio -> {'tipo': 'integer', 'longitud': None, 'precision': 32, 'escala': 0, 'nulo': 'NO', 'default': None}
+FALTA: asignacion_rutina_ejercicios.veces_planificadas -> {'tipo': 'integer', 'longitud': None, 'precision': 32, 'escala': 0, 'nulo': 'NO', 'default': '1'}
+FALTA: sesiones_entrenamiento.id_asignacion -> {'tipo': 'integer', 'longitud': None, 'precision': 32, 'escala': 0, 'nulo': 'YES', 'default': None}
+FALTA: sesiones_entrenamiento.id_asignacion_ejercicio -> {'tipo': 'integer', 'longitud': None, 'precision': 32, 'escala': 0, 'nulo': 'YES', 'default': None}
+FALTA: sesiones_entrenamiento.id_rutina -> {'tipo': 'integer', 'longitud': None, 'precision': 32, 'escala': 0, 'nulo': 'YES', 'default': None}
+FALTA: sesiones_entrenamiento.nombre_ejercicio -> {'tipo': 'character varying', 'longitud': 100, 'precision': None, 'escala': None, 'nulo': 'YES', 'default': "''::character varying"}
+FALTA: sesiones_entrenamiento.veces_planificadas -> {'tipo': 'integer', 'longitud': None, 'precision': 32, 'escala': 0, 'nulo': 'NO', 'default': '1'}
+FALTA: sesiones_entrenamiento.veces_realizadas -> {'tipo': 'integer', 'longitud': None, 'precision': 32, 'escala': 0, 'nulo': 'NO', 'default': '0'}
+FALTA: usuarios.contrase�a_hash -> {'tipo': 'character varying', 'longitud': 255, 'precision': None, 'escala': None, 'nulo': 'YES', 'default': None}
+
+COLUMNAS CON DEFINICION DIFERENTE
+================================================================================
+DIFERENCIA: sesiones_entrenamiento.calorias_quemadas
+  Principal: {'tipo': 'numeric', 'longitud': None, 'precision': 10, 'escala': 2, 'nulo': 'NO', 'default': None}
+  Prueba:    {'tipo': 'numeric', 'longitud': None, 'precision': 6, 'escala': 2, 'nulo': 'NO', 'default': None}
+
+COLUMNAS PRESENTES SOLO EN PRUEBA
+================================================================================
+SOLO EN PRUEBA: administradores.id_usuario -> {'tipo': 'integer', 'longitud': None, 'precision': 32, 'escala': 0, 'nulo': 'NO', 'default': None}
+SOLO EN PRUEBA: vw_clientes_completo.contrasenia_hash -> {'tipo': 'character varying', 'longitud': 255, 'precision': None, 'escala': None, 'nulo': 'YES', 'default': None}
+SOLO EN PRUEBA: vw_progreso_cliente.apellido -> {'tipo': 'character varying', 'longitud': 100, 'precision': None, 'escala': None, 'nulo': 'YES', 'default': None}
+SOLO EN PRUEBA: vw_progreso_cliente.id_cliente -> {'tipo': 'integer', 'longitud': None, 'precision': 32, 'escala': 0, 'nulo': 'YES', 'default': None}
+SOLO EN PRUEBA: vw_progreso_cliente.mes -> {'tipo': 'date', 'longitud': None, 'precision': None, 'escala': None, 'nulo': 'YES', 'default': None}
+SOLO EN PRUEBA: vw_progreso_cliente.nivel_cumplimiento -> {'tipo': 'text', 'longitud': None, 'precision': None, 'escala': None, 'nulo': 'YES', 'default': None}
+SOLO EN PRUEBA: vw_progreso_cliente.nombre -> {'tipo': 'character varying', 'longitud': 100, 'precision': None, 'escala': None, 'nulo': 'YES', 'default': None}
+SOLO EN PRUEBA: vw_progreso_cliente.peso -> {'tipo': 'numeric', 'longitud': None, 'precision': 5, 'escala': 2, 'nulo': 'YES', 'default': None}
+SOLO EN PRUEBA: vw_progreso_cliente.porcentaje_cumplimiento -> {'tipo': 'numeric', 'longitud': None, 'precision': 5, 'escala': 2, 'nulo': 'YES', 'default': None}
+SOLO EN PRUEBA: vw_progreso_cliente.sesiones_completadas -> {'tipo': 'integer', 'longitud': None, 'precision': 32, 'escala': 0, 'nulo': 'YES', 'default': None}
+SOLO EN PRUEBA: vw_progreso_cliente.sesiones_planificadas -> {'tipo': 'integer', 'longitud': None, 'precision': 32, 'escala': 0, 'nulo': 'YES', 'default': None}

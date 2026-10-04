@@ -1,15 +1,15 @@
 RESUMEN DE PRUEBAS DE INTEGRACIÓN
 ======================================================================
-Fecha: 2026-09-27 22:30:29
+Fecha: 2026-10-03 19:54:02
 Total: 8
 Exitosas: 8
 Fallidas: 0
 
-✅ Registro de cliente: Cliente registrado con ID: 6800
+✅ Registro de cliente: Cliente registrado con ID: 578
 ✅ Verificación de hash: Hash almacenado correctamente
 ✅ Login correcto: Usuario autenticado correctamente
 ✅ Login incorrecto: Contraseña incorrecta rechazada
-✅ Asignación de rutina: Rutina asignada con ID: 519
-✅ Registro de sesión: Sesión registrada con ID: 18649
+✅ Asignación de rutina: Rutina asignada con ID: 35
+✅ Registro de sesión: Sesión registrada con ID: 2207
 ✅ Cálculo de progreso: Sesiones completadas este mes: 1
 ✅ Verificación de LOG_CARDIO.txt: Archivo encontrado: LOG_CARDIO.txt; entradas: 180

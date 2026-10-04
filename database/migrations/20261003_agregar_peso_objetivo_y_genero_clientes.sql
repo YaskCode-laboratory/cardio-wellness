@@ -1,0 +1,9 @@
+﻿BEGIN;
+
+ALTER TABLE public.clientes
+ADD COLUMN IF NOT EXISTS peso_objetivo NUMERIC(6, 2);
+
+ALTER TABLE public.clientes
+ADD COLUMN IF NOT EXISTS genero VARCHAR(30);
+
+COMMIT;

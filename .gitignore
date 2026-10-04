@@ -39,8 +39,15 @@ reportes/*.pdf
 reporte_*.txt
 
 # Environment variables
+# El archivo .env contiene credenciales reales y no debe subirse.
+.env
+
+# Ignorar configuraciones locales o específicas de entornos.
 .env.local
 .env.*
+
+# Permitir la plantilla pública sin credenciales reales.
+!.env.example
 
 # OS
 .DS_Store
