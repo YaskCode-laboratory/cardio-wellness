@@ -175,8 +175,8 @@ Proyecto desarrollado para fines académicos.
 ---
 
 **Versión:** 1.0.0  
-**Última actualización:** 2026-09-26  
-**Estado:** ✅ Producción
+**Última actualización:** 2026-10-03<br>
+**Estado:** Validación técnica satisfactoria — 2.690 pruebas automatizadas aprobadas con pytest.
 
 ---
 
