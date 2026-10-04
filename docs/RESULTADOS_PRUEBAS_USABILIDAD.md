@@ -1,95 +1,95 @@
-﻿# Resultados de Pruebas de Usabilidad â€” Cardio-Wellness
+# Resultados de Pruebas de Usabilidad — Cardio-Wellness
 
-**VersiÃ³n del documento:** 1.1
-**Fecha de actualizaciÃ³n:** 2026-10-03
-**Estado:** Pruebas de usabilidad con participantes reales pendientes de ejecuciÃ³n.
+**Versión del documento:** 1.1
+**Fecha de actualización:** 2026-10-03
+**Estado:** Pruebas de usabilidad con participantes reales pendientes de ejecución.
 
 ---
 
-## 1. PropÃ³sito
+## 1. Propósito
 
-Este documento registra el estado, la evidencia tÃ©cnica complementaria y los
-resultados que se obtendrÃ¡n durante las pruebas de usabilidad de
+Este documento registra el estado, la evidencia técnica complementaria y los
+resultados que se obtendrán durante las pruebas de usabilidad de
 Cardio-Wellness con participantes reales.
 
-El protocolo, las tareas, las mÃ©tricas y los criterios de aceptaciÃ³n se
+El protocolo, las tareas, las métricas y los criterios de aceptación se
 encuentran definidos en:
 
 - [`PLAN_PRUEBAS_USABILIDAD.md`](PLAN_PRUEBAS_USABILIDAD.md)
 
-Este documento diferencia explÃ­citamente entre:
+Este documento diferencia explícitamente entre:
 
-- Pruebas tÃ©cnicas automatizadas.
+- Pruebas técnicas automatizadas.
 - Simulaciones automatizadas de flujos.
 - Pruebas de usabilidad realizadas con participantes humanos.
 
-Las pruebas automatizadas permiten validar comportamiento tÃ©cnico, seguridad,
-integraciÃ³n, persistencia y rendimiento. Sin embargo, no sustituyen la
-evaluaciÃ³n de facilidad de uso, comprensiÃ³n, satisfacciÃ³n o recomendaciÃ³n
+Las pruebas automatizadas permiten validar comportamiento técnico, seguridad,
+integración, persistencia y rendimiento. Sin embargo, no sustituyen la
+evaluación de facilidad de uso, comprensión, satisfacción o recomendación
 obtenida mediante personas reales.
 
 ---
 
 ## 2. Estado actual
 
-Las pruebas de usabilidad con participantes reales estÃ¡n pendientes de
-ejecuciÃ³n.
+Las pruebas de usabilidad con participantes reales están pendientes de
+ejecución.
 
-Por tanto, actualmente no existen resultados empÃ­ricos de:
+Por tanto, actualmente no existen resultados empíricos de:
 
 - Tasa de completitud de tareas realizada por usuarios reales.
-- Tiempo promedio de realizaciÃ³n de tareas.
+- Tiempo promedio de realización de tareas.
 - Errores observados durante sesiones con participantes.
 - Solicitudes de ayuda durante las tareas.
-- SatisfacciÃ³n general o satisfacciÃ³n por mÃ³dulo.
+- Satisfacción general o satisfacción por módulo.
 - NPS obtenido mediante encuestas a participantes reales.
 - Defectos de usabilidad detectados durante las fases Alpha o Beta.
 
-No se deben reportar cifras de NPS, satisfacciÃ³n o completitud como resultados
+No se deben reportar cifras de NPS, satisfacción o completitud como resultados
 de usabilidad reales hasta realizar las sesiones, conservar los registros y
 consolidar los datos obtenidos.
 
 ---
 
-## 3. PreparaciÃ³n completada
+## 3. Preparación completada
 
-Aunque la evaluaciÃ³n humana estÃ¡ pendiente, se completaron las siguientes
-actividades de preparaciÃ³n:
+Aunque la evaluación humana está pendiente, se completaron las siguientes
+actividades de preparación:
 
 | Actividad | Estado |
 |---|---|
-| Plan de pruebas de usabilidad documentado | âœ… Completado |
-| Tareas crÃ­ticas definidas | âœ… Completado |
-| MÃ©tricas y criterios de aceptaciÃ³n definidos | âœ… Completado |
-| Plantilla de registro por participante | âœ… Completado |
-| Escenarios de prueba definidos | âœ… Completado |
-| Entorno tÃ©cnico de pruebas validado | âœ… Completado |
-| SimulaciÃ³n automatizada de flujos | âœ… Ejecutada |
-| Pruebas de seguridad automatizadas | âœ… Ejecutadas |
-| Prueba de estrÃ©s PostgreSQL | âœ… Ejecutada |
-| EjecuciÃ³n con participantes reales | â³ Pendiente |
-| ConsolidaciÃ³n de resultados Alpha | â³ Pendiente |
-| EjecuciÃ³n de Fase Beta | â³ Pendiente |
+| Plan de pruebas de usabilidad documentado | ✅ Completado |
+| Tareas críticas definidas | ✅ Completado |
+| Métricas y criterios de aceptación definidos | ✅ Completado |
+| Plantilla de registro por participante | ✅ Completado |
+| Escenarios de prueba definidos | ✅ Completado |
+| Entorno técnico de pruebas validado | ✅ Completado |
+| Simulación automatizada de flujos | ✅ Ejecutada |
+| Pruebas de seguridad automatizadas | ✅ Ejecutadas |
+| Prueba de estrés PostgreSQL | ✅ Ejecutada |
+| Ejecución con participantes reales | ⏳ Pendiente |
+| Consolidación de resultados Alpha | ⏳ Pendiente |
+| Ejecución de Fase Beta | ⏳ Pendiente |
 
 ---
-### 3.1 EjecuciÃ³n de la baterÃ­a automatizada
+### 3.1 Ejecución de la batería automatizada
 
-La evidencia tÃ©cnica registrada en este documento fue obtenida mediante la
-ejecuciÃ³n del script:
+La evidencia técnica registrada en este documento fue obtenida mediante la
+ejecución del script:
 
 ```text
 run_all_tests.bat
 ```
 
-La ejecuciÃ³n incluyÃ³ pruebas automatizadas de seguridad, simulaciÃ³n masiva de
-flujos, pruebas de estrÃ©s PostgreSQL, prueba histÃ³rica SQLite y pruebas de
-integraciÃ³n.
+La ejecución incluyó pruebas automatizadas de seguridad, simulación masiva de
+flujos, pruebas de estrés PostgreSQL, prueba histórica SQLite y pruebas de
+integración.
 
-La fecha de ejecuciÃ³n registrada fue el 2026-10-03.
+La fecha de ejecución registrada fue el 2026-10-03.
 
-## 4. SimulaciÃ³n automatizada complementaria
+## 4. Simulación automatizada complementaria
 
-El 2026-10-03 se ejecutÃ³ una simulaciÃ³n automatizada de flujos con 100 cuentas
+El 2026-10-03 se ejecutó una simulación automatizada de flujos con 100 cuentas
 de prueba.
 
 Esta actividad verifica que los flujos programados puedan ejecutarse de forma
@@ -97,42 +97,42 @@ automatizada. No equivale a una prueba de usabilidad realizada con personas
 reales, ya que las cuentas automatizadas no navegan, interpretan la interfaz,
 cometen errores humanos ni responden encuestas reales.
 
-| MÃ©trica tÃ©cnica | Resultado |
+| Métrica técnica | Resultado |
 |---|---:|
 | Cuentas automatizadas creadas y procesadas | 100 |
 | Naturaleza de la prueba | Automatizada |
-| Ã‰xito total de flujos automatizados | 93.0% |
+| Éxito total de flujos automatizados | 93.0% |
 | Participantes humanos | 0 |
 
-El reporte automÃ¡tico tambiÃ©n generÃ³ los siguientes indicadores:
+El reporte automático también generó los siguientes indicadores:
 
-| Indicador generado por simulaciÃ³n | Valor |
+| Indicador generado por simulación | Valor |
 |---|---:|
-| SatisfacciÃ³n simulada | 4.65/5.0 |
+| Satisfacción simulada | 4.65/5.0 |
 | Promotores simulados | 98% |
 | Detractores simulados | 0% |
-| NPS calculado por simulaciÃ³n | 98 |
+| NPS calculado por simulación | 98 |
 
-Los valores de satisfacciÃ³n, promotores, detractores y NPS anteriores fueron
+Los valores de satisfacción, promotores, detractores y NPS anteriores fueron
 producidos por el proceso automatizado. Por consiguiente, no representan
 opiniones, encuestas ni recomendaciones de personas reales.
 
 No deben utilizarse como resultados de la Fase Alpha, Fase Beta ni como
-evidencia de satisfacciÃ³n humana.
+evidencia de satisfacción humana.
 
 ---
 
-## 5. Evidencia tÃ©cnica relacionada
+## 5. Evidencia técnica relacionada
 
-El 2026-10-03 se ejecutaron pruebas automatizadas de seguridad, simulaciÃ³n de
-flujos, estrÃ©s de base de datos y pruebas de integraciÃ³n.
+El 2026-10-03 se ejecutaron pruebas automatizadas de seguridad, simulación de
+flujos, estrés de base de datos y pruebas de integración.
 
-La evidencia tÃ©cnica se conserva como informaciÃ³n complementaria al plan de
+La evidencia técnica se conserva como información complementaria al plan de
 usabilidad y no reemplaza las pruebas moderadas con participantes humanos.
 
 ### 5.1 Pruebas automatizadas de seguridad
 
-| MÃ©trica | Resultado |
+| Métrica | Resultado |
 |---|---:|
 | Pruebas de seguridad ejecutadas | 8 |
 | Pruebas aprobadas | 8 |
@@ -142,97 +142,97 @@ usabilidad y no reemplaza las pruebas moderadas con participantes humanos.
 
 Los controles automatizados evaluaron:
 
-- ValidaciÃ³n de contraseÃ±as.
-- GeneraciÃ³n de hash de contraseÃ±as con salt.
-- Uso de consultas parametrizadas para reducir riesgo de inyecciÃ³n SQL.
-- ProtecciÃ³n frente a payloads de XSS evaluados por el script.
-- ValidaciÃ³n de datos de entrada.
-- ImplementaciÃ³n de acceso a datos.
-- ProtecciÃ³n de contraseÃ±as sin almacenamiento en texto plano.
-- ConfiguraciÃ³n de variables de seguridad y detecciÃ³n de secretos hardcoded.
+- Validación de contraseñas.
+- Generación de hash de contraseñas con salt.
+- Uso de consultas parametrizadas para reducir riesgo de inyección SQL.
+- Protección frente a payloads de XSS evaluados por el script.
+- Validación de datos de entrada.
+- Implementación de acceso a datos.
+- Protección de contraseñas sin almacenamiento en texto plano.
+- Configuración de variables de seguridad y detección de secretos hardcoded.
 
 El resultado indica que los controles evaluados finalizaron correctamente y que
-el script no detectÃ³ vulnerabilidades en los casos automatizados ejecutados.
+el script no detectó vulnerabilidades en los casos automatizados ejecutados.
 
-Este resultado no constituye una garantÃ­a absoluta de seguridad ni sustituye
-una auditorÃ­a de seguridad independiente, revisiÃ³n manual de cÃ³digo o prueba de
-penetraciÃ³n profesional con mayor alcance.
+Este resultado no constituye una garantía absoluta de seguridad ni sustituye
+una auditoría de seguridad independiente, revisión manual de código o prueba de
+penetración profesional con mayor alcance.
 
-### 5.2 Prueba de estrÃ©s PostgreSQL
+### 5.2 Prueba de estrés PostgreSQL
 
-| MÃ©trica | Resultado |
+| Métrica | Resultado |
 |---|---:|
 | Base de datos evaluada | PostgreSQL |
 | Usuarios concurrentes | 30 |
 | Clientes de prueba creados | 100 |
-| DuraciÃ³n configurada | 40 segundos |
-| Tiempo total de ejecuciÃ³n | 40.26 segundos |
+| Duración configurada | 40 segundos |
+| Tiempo total de ejecución | 40.26 segundos |
 | Operaciones totales | 11,113 |
 | Operaciones exitosas | 11,113 |
 | Operaciones fallidas | 0 |
-| Tasa de Ã©xito | 100.00% |
+| Tasa de éxito | 100.00% |
 | Operaciones por segundo | 276.05 |
 | Tiempo promedio de respuesta | 22.40 ms |
-| Tiempo mÃ¡ximo de respuesta | 345.19 ms |
-| Tiempo mÃ­nimo de respuesta | 0.37 ms |
+| Tiempo máximo de respuesta | 345.19 ms |
+| Tiempo mínimo de respuesta | 0.37 ms |
 
-Durante la carga evaluada, PostgreSQL procesÃ³ 11,113 operaciones sin fallos
-registrados. La prueba utilizÃ³ 30 usuarios concurrentes y 100 clientes de
+Durante la carga evaluada, PostgreSQL procesó 11,113 operaciones sin fallos
+registrados. La prueba utilizó 30 usuarios concurrentes y 100 clientes de
 prueba durante aproximadamente 40 segundos.
 
-El resultado es vÃ¡lido Ãºnicamente para el entorno, duraciÃ³n, volumen de datos y
-carga evaluados. No permite garantizar el mismo rendimiento ante mayor nÃºmero
+El resultado es válido únicamente para el entorno, duración, volumen de datos y
+carga evaluados. No permite garantizar el mismo rendimiento ante mayor número
 de usuarios, periodos prolongados, infraestructura distinta o patrones de uso
 diferentes.
 
-### 5.3 Prueba histÃ³rica SQLite
+### 5.3 Prueba histórica SQLite
 
-| MÃ©trica | Resultado |
+| Métrica | Resultado |
 |---|---:|
 | Base de datos evaluada | SQLite |
 | Usuarios concurrentes | 20 |
-| DuraciÃ³n | 30.01 segundos |
+| Duración | 30.01 segundos |
 | Operaciones totales | 507 |
 | Operaciones exitosas | 499 |
 | Operaciones fallidas | 8 |
-| Tasa de Ã©xito | 98.42% |
+| Tasa de éxito | 98.42% |
 | Operaciones por segundo | 16.90 |
 | Tiempo promedio de respuesta | 623.64 ms |
-| Tiempo mÃ¡ximo de respuesta | 11,226.94 ms |
-| Tiempo mÃ­nimo de respuesta | 0.82 ms |
+| Tiempo máximo de respuesta | 11,226.94 ms |
+| Tiempo mínimo de respuesta | 0.82 ms |
 | Errores observados | `database is locked` |
 
-La prueba histÃ³rica con SQLite presentÃ³ 8 errores de bloqueo de base de datos
+La prueba histórica con SQLite presentó 8 errores de bloqueo de base de datos
 bajo concurrencia, identificados como `database is locked`.
 
-Por esta razÃ³n, esta prueba no debe utilizarse como evidencia de concurrencia
-robusta en SQLite. Se conserva Ãºnicamente como antecedente tÃ©cnico y no
-representa la configuraciÃ³n actual basada en PostgreSQL.
+Por esta razón, esta prueba no debe utilizarse como evidencia de concurrencia
+robusta en SQLite. Se conserva únicamente como antecedente técnico y no
+representa la configuración actual basada en PostgreSQL.
 
-### 5.4 Pruebas de integraciÃ³n
+### 5.4 Pruebas de integración
 
-Las pruebas de integraciÃ³n fueron iniciadas el 2026-10-03.
+Las pruebas de integración fueron iniciadas el 2026-10-03.
 
-El resultado final no se registra todavÃ­a en este documento porque se requiere
-conservar la salida completa de ejecuciÃ³n, incluyendo:
+El resultado final no se registra todavía en este documento porque se requiere
+conservar la salida completa de ejecución, incluyendo:
 
-- NÃºmero total de pruebas ejecutadas.
+- Número total de pruebas ejecutadas.
 - Pruebas aprobadas.
 - Pruebas fallidas.
 - Errores detectados.
-- Mensaje final de conclusiÃ³n.
+- Mensaje final de conclusión.
 - Reporte o archivo de evidencia generado.
 
-Hasta contar con esa salida completa, el estado de las pruebas de integraciÃ³n
-se considera pendiente de consolidaciÃ³n documental.
+Hasta contar con esa salida completa, el estado de las pruebas de integración
+se considera pendiente de consolidación documental.
 
 ---
 
 ## 6. Resultados Fase Alpha
 
-**Estado:** Pendiente de ejecuciÃ³n con participantes reales.
+**Estado:** Pendiente de ejecución con participantes reales.
 
-La Fase Alpha se ejecutarÃ¡ con entre 3 y 5 participantes representativos de los
+La Fase Alpha se ejecutará con entre 3 y 5 participantes representativos de los
 perfiles administrador, entrenador o cliente.
 
 ### 6.1 Resumen de participantes
@@ -241,7 +241,7 @@ perfiles administrador, entrenador o cliente.
 |---|---|
 | Participantes planificados | 3 a 5 |
 | Participantes ejecutados | Pendiente |
-| Periodo de ejecuciÃ³n | Pendiente |
+| Periodo de ejecución | Pendiente |
 | Entorno utilizado | Base temporal y datos ficticios |
 | Consentimientos registrados | Pendiente |
 
@@ -251,59 +251,59 @@ perfiles administrador, entrenador o cliente.
 |---|---:|---:|---:|---:|---|
 | Registrar cliente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente |
 | Asignar rutina | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente |
-| Registrar sesiÃ³n | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente |
+| Registrar sesión | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente |
 | Consultar progreso | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente |
 
-### 6.3 SatisfacciÃ³n Alpha
+### 6.3 Satisfacción Alpha
 
-| MÃ©trica | Objetivo | Resultado |
+| Métrica | Objetivo | Resultado |
 |---|---:|---:|
-| SatisfacciÃ³n general | â‰¥4.0/5 | Pendiente |
-| Tasa de completitud | â‰¥80% | Pendiente |
+| Satisfacción general | ≥4.0/5 | Pendiente |
+| Tasa de completitud | ≥80% | Pendiente |
 | Tiempo promedio por tarea | <2 minutos | Pendiente |
-| Errores por tarea | â‰¤2 | Pendiente |
+| Errores por tarea | ≤2 | Pendiente |
 
 ---
 
 ## 7. Resultados Fase Beta
 
-**Estado:** Pendiente de ejecuciÃ³n con participantes reales.
+**Estado:** Pendiente de ejecución con participantes reales.
 
-La Fase Beta se ejecutarÃ¡ con entre 10 y 15 participantes representativos de
+La Fase Beta se ejecutará con entre 10 y 15 participantes representativos de
 los perfiles definidos en el plan de pruebas.
 
-| MÃ©trica | Objetivo | Resultado |
+| Métrica | Objetivo | Resultado |
 |---|---:|---:|
 | Participantes ejecutados | 10 a 15 | Pendiente |
-| NPS | â‰¥40 | Pendiente |
-| SatisfacciÃ³n por mÃ³dulo | â‰¥4.0/5 | Pendiente |
-| Completitud de tareas | â‰¥80% | Pendiente |
-| Incidencias crÃ­ticas | â‰¤5 | Pendiente |
+| NPS | ≥40 | Pendiente |
+| Satisfacción por módulo | ≥4.0/5 | Pendiente |
+| Completitud de tareas | ≥80% | Pendiente |
+| Incidencias críticas | ≤5 | Pendiente |
 | Solicitudes de mejora | Registro cualitativo | Pendiente |
 
-El NPS de la Fase Beta se calcularÃ¡ exclusivamente con las respuestas reales a
-la pregunta de recomendaciÃ³n definida en el plan de pruebas.
+El NPS de la Fase Beta se calculará exclusivamente con las respuestas reales a
+la pregunta de recomendación definida en el plan de pruebas.
 
 ---
 
 ## 8. Hallazgos y mejoras
 
-**Estado:** Pendiente de ejecuciÃ³n con participantes reales.
+**Estado:** Pendiente de ejecución con participantes reales.
 
-Cuando se ejecuten las sesiones, los hallazgos deberÃ¡n registrarse con la
+Cuando se ejecuten las sesiones, los hallazgos deberán registrarse con la
 siguiente estructura:
 
-| ID | Hallazgo | Tarea afectada | Severidad | Evidencia | AcciÃ³n propuesta | Estado |
+| ID | Hallazgo | Tarea afectada | Severidad | Evidencia | Acción propuesta | Estado |
 |---|---|---|---|---|---|---|
 | U-01 | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente |
 
-### ClasificaciÃ³n de severidad
+### Clasificación de severidad
 
-| Severidad | DescripciÃ³n |
+| Severidad | Descripción |
 |---|---|
-| CrÃ­tica | Impide completar una tarea esencial |
-| Alta | Dificulta significativamente una tarea crÃ­tica |
-| Media | Genera confusiÃ³n o demora, pero existe una alternativa |
+| Crítica | Impide completar una tarea esencial |
+| Alta | Dificulta significativamente una tarea crítica |
+| Media | Genera confusión o demora, pero existe una alternativa |
 | Baja | Mejora visual, textual o de consistencia |
 
 ---
@@ -312,37 +312,37 @@ siguiente estructura:
 
 - No se han realizado sesiones con usuarios reales.
 - No existe una muestra humana real para calcular NPS.
-- La simulaciÃ³n automatizada no reemplaza la observaciÃ³n de participantes.
-- Los indicadores de satisfacciÃ³n y NPS generados por scripts no representan
+- La simulación automatizada no reemplaza la observación de participantes.
+- Los indicadores de satisfacción y NPS generados por scripts no representan
   experiencia de usuario real.
-- Las pruebas automatizadas de seguridad cubren Ãºnicamente los controles y
+- Las pruebas automatizadas de seguridad cubren únicamente los controles y
   payloads incluidos en el script ejecutado.
 - La prueba PostgreSQL representa una carga concreta de 30 usuarios
   concurrentes durante aproximadamente 40 segundos.
-- La prueba histÃ³rica SQLite presentÃ³ bloqueos bajo concurrencia y no
+- La prueba histórica SQLite presentó bloqueos bajo concurrencia y no
   representa el comportamiento de PostgreSQL.
-- El resultado final de las pruebas de integraciÃ³n estÃ¡ pendiente de
-  consolidaciÃ³n documental.
-- Los resultados futuros dependerÃ¡n de la disponibilidad y representatividad
+- El resultado final de las pruebas de integración está pendiente de
+  consolidación documental.
+- Los resultados futuros dependerán de la disponibilidad y representatividad
   de los participantes seleccionados.
 
 ---
 
-## 10. ConclusiÃ³n actual
+## 10. Conclusión actual
 
 Cardio-Wellness cuenta con un protocolo de pruebas de usabilidad documentado,
-tareas crÃ­ticas definidas, mÃ©tricas de evaluaciÃ³n, una plantilla de registro y
-evidencia tÃ©cnica complementaria de seguridad, simulaciÃ³n automatizada y
+tareas críticas definidas, métricas de evaluación, una plantilla de registro y
+evidencia técnica complementaria de seguridad, simulación automatizada y
 rendimiento de PostgreSQL.
 
 La evidencia disponible confirma que, en las pruebas automatizadas ejecutadas,
 los controles de seguridad evaluados finalizaron sin fallos, los flujos
-automatizados procesaron 100 cuentas con una tasa de Ã©xito de 93.0% y
-PostgreSQL procesÃ³ 11,113 operaciones sin fallos bajo la carga evaluada.
+automatizados procesaron 100 cuentas con una tasa de éxito de 93.0% y
+PostgreSQL procesó 11,113 operaciones sin fallos bajo la carga evaluada.
 
 No obstante, estos resultados no sustituyen una prueba de usabilidad con
 personas reales.
 
-La ejecuciÃ³n de pruebas con participantes reales permanece pendiente. Por
-consiguiente, no se declara aÃºn que el sistema cumpla los criterios de
-usabilidad, satisfacciÃ³n general o NPS definidos en el plan.
+La ejecución de pruebas con participantes reales permanece pendiente. Por
+consiguiente, no se declara aún que el sistema cumpla los criterios de
+usabilidad, satisfacción general o NPS definidos en el plan.

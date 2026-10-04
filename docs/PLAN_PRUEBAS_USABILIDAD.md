@@ -1,24 +1,24 @@
-﻿# Plan de Pruebas de Usabilidad â€” Cardio-Wellness
+# Plan de Pruebas de Usabilidad — Cardio-Wellness
 
-**VersiÃ³n del documento:** 1.1
-**Fecha de actualizaciÃ³n:** 2026-10-03
-**Estado:** Protocolo documentado; ejecuciÃ³n con usuarios reales pendiente.
+**Versión del documento:** 1.1
+**Fecha de actualización:** 2026-10-03
+**Estado:** Protocolo documentado; ejecución con usuarios reales pendiente.
 
 ---
 
-## 1. PropÃ³sito
+## 1. Propósito
 
 Este documento define el protocolo para evaluar la usabilidad de
 Cardio-Wellness con participantes reales que representen los perfiles de uso
 del sistema.
 
-La evaluaciÃ³n busca determinar si los usuarios pueden completar las tareas
-crÃ­ticas sin asistencia excesiva, identificar problemas de navegaciÃ³n o
-comprensiÃ³n y recopilar sugerencias de mejora antes de una futura adopciÃ³n en
+La evaluación busca determinar si los usuarios pueden completar las tareas
+críticas sin asistencia excesiva, identificar problemas de navegación o
+comprensión y recopilar sugerencias de mejora antes de una futura adopción en
 un gimnasio.
 
-Este plan no presenta resultados de usabilidad reales. Las mÃ©tricas de
-completitud, satisfacciÃ³n, tiempos y NPS solo podrÃ¡n informarse despuÃ©s de
+Este plan no presenta resultados de usabilidad reales. Las métricas de
+completitud, satisfacción, tiempos y NPS solo podrán informarse después de
 ejecutar las sesiones con participantes y registrar la evidencia
 correspondiente.
 
@@ -29,13 +29,13 @@ correspondiente.
 Las pruebas cubren los flujos principales del sistema:
 
 - Registro de clientes.
-- AsignaciÃ³n de rutinas de entrenamiento.
+- Asignación de rutinas de entrenamiento.
 - Consulta de rutinas activas.
 - Registro de sesiones de entrenamiento.
 - Consulta de progreso mensual.
 
-La prueba se realizarÃ¡ en un entorno de datos ficticios. No se utilizarÃ¡n
-datos reales de clientes, contraseÃ±as reales ni informaciÃ³n mÃ©dica
+La prueba se realizará en un entorno de datos ficticios. No se utilizarán
+datos reales de clientes, contraseñas reales ni información médica
 identificable.
 
 ---
@@ -45,61 +45,61 @@ identificable.
 ### Objetivo general
 
 Validar que los usuarios representativos de Cardio-Wellness puedan realizar
-las tareas crÃ­ticas del sistema con claridad, eficiencia y mÃ­nima asistencia.
+las tareas críticas del sistema con claridad, eficiencia y mínima asistencia.
 
-### Objetivos especÃ­ficos
+### Objetivos específicos
 
-- Medir la tasa de finalizaciÃ³n de las tareas crÃ­ticas.
+- Medir la tasa de finalización de las tareas críticas.
 - Registrar el tiempo empleado por los participantes.
-- Identificar errores, dudas y puntos de fricciÃ³n.
-- Recoger la percepciÃ³n de facilidad de uso y satisfacciÃ³n.
+- Identificar errores, dudas y puntos de fricción.
+- Recoger la percepción de facilidad de uso y satisfacción.
 - Obtener observaciones cualitativas para priorizar mejoras.
-- Medir NPS Ãºnicamente en la Fase Beta, con participantes reales.
+- Medir NPS únicamente en la Fase Beta, con participantes reales.
 
 ---
 
 ## 4. Perfiles evaluados
 
-| Perfil | DescripciÃ³n | Tareas principales |
+| Perfil | Descripción | Tareas principales |
 |---|---|---|
-| Administrador o entrenador | Persona encargada de registrar clientes y asignar rutinas | Registro de cliente y asignaciÃ³n de rutina |
-| Cliente | Persona que consulta y registra su actividad fÃ­sica | Consulta de rutina, registro de sesiÃ³n y progreso |
+| Administrador o entrenador | Persona encargada de registrar clientes y asignar rutinas | Registro de cliente y asignación de rutina |
+| Cliente | Persona que consulta y registra su actividad física | Consulta de rutina, registro de sesión y progreso |
 
-Los participantes se identificarÃ¡n de forma anÃ³nima mediante cÃ³digos como
+Los participantes se identificarán de forma anónima mediante códigos como
 `P1`, `P2`, `P3` y no mediante nombres completos.
 
 ---
 
 ## 5. Fase Alpha
 
-### 5.1 PropÃ³sito
+### 5.1 Propósito
 
-La Fase Alpha permite detectar problemas iniciales en flujos crÃ­ticos antes de
-una evaluaciÃ³n piloto mÃ¡s amplia.
+La Fase Alpha permite detectar problemas iniciales en flujos críticos antes de
+una evaluación piloto más amplia.
 
 ### 5.2 Participantes
 
 - Entre 3 y 5 participantes.
 - Personas que representen los perfiles de administrador, entrenador o cliente.
-- Participantes que no conozcan en detalle la implementaciÃ³n interna de la
+- Participantes que no conozcan en detalle la implementación interna de la
   interfaz.
-- DuraciÃ³n estimada de la fase: 2 semanas.
+- Duración estimada de la fase: 2 semanas.
 
 ### 5.3 Entorno
 
-- AplicaciÃ³n ejecutada en un entorno local de pruebas.
+- Aplicación ejecutada en un entorno local de pruebas.
 - Base de datos temporal: `cardio_wellness_prueba_limpieza`.
 - Cuentas, clientes, rutinas y sesiones ficticias.
-- Sin uso de informaciÃ³n personal real.
+- Sin uso de información personal real.
 
-### 5.4 Tareas crÃ­ticas
+### 5.4 Tareas críticas
 
 #### Tarea 1: Registrar un nuevo cliente
 
 **Escenario para el participante:**
 
-> Eres responsable de la gestiÃ³n del gimnasio. Necesitas registrar a un nuevo
-> cliente para que pueda comenzar a usar el sistema. Completa la informaciÃ³n
+> Eres responsable de la gestión del gimnasio. Necesitas registrar a un nuevo
+> cliente para que pueda comenzar a usar el sistema. Completa la información
 > solicitada y guarda el registro.
 
 **Datos de prueba sugeridos:**
@@ -112,14 +112,14 @@ una evaluaciÃ³n piloto mÃ¡s amplia.
 | Edad | 30 |
 | Peso | 70 kg |
 | Altura | 1.70 m |
-| Objetivo | Mantener condiciÃ³n |
+| Objetivo | Mantener condición |
 
-**Criterios de Ã©xito:**
+**Criterios de éxito:**
 
 - El participante registra el cliente correctamente.
-- No requiere indicaciones sobre la ubicaciÃ³n de botones o menÃºs.
+- No requiere indicaciones sobre la ubicación de botones o menús.
 - Tiempo objetivo: menos de 2 minutos.
-- No se producen errores crÃ­ticos.
+- No se producen errores críticos.
 
 ---
 
@@ -128,28 +128,28 @@ una evaluaciÃ³n piloto mÃ¡s amplia.
 **Escenario para el participante:**
 
 > El cliente registrado necesita comenzar un plan de entrenamiento. Localiza al
-> cliente y asÃ­gnale una rutina disponible.
+> cliente y asígnale una rutina disponible.
 
-**Criterios de Ã©xito:**
+**Criterios de éxito:**
 
 - El participante encuentra al cliente.
-- Selecciona y confirma una rutina vÃ¡lida.
-- La asignaciÃ³n queda registrada correctamente.
+- Selecciona y confirma una rutina válida.
+- La asignación queda registrada correctamente.
 - Tiempo objetivo: menos de 1 minuto.
 
 ---
 
-#### Tarea 3: Registrar una sesiÃ³n de entrenamiento
+#### Tarea 3: Registrar una sesión de entrenamiento
 
 **Escenario para el participante:**
 
-> Ahora actÃºa como cliente. Consulta tu rutina activa y registra una sesiÃ³n de
-> entrenamiento realizada, incluyendo fecha, duraciÃ³n, intensidad y calorÃ­as.
+> Ahora actúa como cliente. Consulta tu rutina activa y registra una sesión de
+> entrenamiento realizada, incluyendo fecha, duración, intensidad y calorías.
 
-**Criterios de Ã©xito:**
+**Criterios de éxito:**
 
 - El participante encuentra su rutina activa.
-- Registra una sesiÃ³n vÃ¡lida.
+- Registra una sesión válida.
 - El sistema confirma el registro.
 - Tiempo objetivo: menos de 2 minutos.
 - No requiere asistencia.
@@ -161,29 +161,29 @@ una evaluaciÃ³n piloto mÃ¡s amplia.
 **Escenario para el participante:**
 
 > Revisa el progreso mensual del cliente para identificar las sesiones
-> registradas y la evoluciÃ³n disponible en el sistema.
+> registradas y la evolución disponible en el sistema.
 
-**Criterios de Ã©xito:**
+**Criterios de éxito:**
 
-- El participante encuentra el mÃ³dulo de progreso.
-- Interpreta la informaciÃ³n principal mostrada.
-- Identifica al menos una mÃ©trica de progreso.
+- El participante encuentra el módulo de progreso.
+- Interpreta la información principal mostrada.
+- Identifica al menos una métrica de progreso.
 - Tiempo objetivo: menos de 2 minutos.
 
 ---
 
-### 5.5 MÃ©tricas Alpha
+### 5.5 Métricas Alpha
 
-| MÃ©trica | Objetivo | MÃ©todo de registro |
+| Métrica | Objetivo | Método de registro |
 |---|---:|---|
-| Completitud de tareas | â‰¥80% | Tareas completadas sin asistencia / tareas intentadas |
-| Tiempo promedio por tarea | <2 minutos | CronÃ³metro desde el inicio hasta la finalizaciÃ³n |
-| Errores por participante | â‰¤2 por tarea | ObservaciÃ³n del moderador |
-| Solicitudes de ayuda | â‰¤1 por tarea | Registro del moderador |
-| SatisfacciÃ³n general | â‰¥4.0/5 | Encuesta posterior |
+| Completitud de tareas | ≥80% | Tareas completadas sin asistencia / tareas intentadas |
+| Tiempo promedio por tarea | <2 minutos | Cronómetro desde el inicio hasta la finalización |
+| Errores por participante | ≤2 por tarea | Observación del moderador |
+| Solicitudes de ayuda | ≤1 por tarea | Registro del moderador |
+| Satisfacción general | ≥4.0/5 | Encuesta posterior |
 | Hallazgos cualitativos | Identificar patrones | Comentarios y observaciones |
 
-La tasa de completitud se calcularÃ¡ mediante:
+La tasa de completitud se calculará mediante:
 
 \[
 \text{Tasa de completitud} =
@@ -196,42 +196,42 @@ La tasa de completitud se calcularÃ¡ mediante:
 
 ## 6. Fase Beta
 
-### 6.1 PropÃ³sito
+### 6.1 Propósito
 
-La Fase Beta permite validar los flujos con una muestra mÃ¡s amplia de personas
-representativas y recoger indicadores de satisfacciÃ³n y recomendaciÃ³n.
+La Fase Beta permite validar los flujos con una muestra más amplia de personas
+representativas y recoger indicadores de satisfacción y recomendación.
 
 ### 6.2 Participantes
 
 - Entre 10 y 15 entrenadores, administradores o clientes representativos.
-- DuraciÃ³n estimada: 4 semanas.
-- Uso de identificadores anÃ³nimos para los registros de prueba.
+- Duración estimada: 4 semanas.
+- Uso de identificadores anónimos para los registros de prueba.
 
-### 6.3 MÃ©tricas Beta
+### 6.3 Métricas Beta
 
-| MÃ©trica | Objetivo | MÃ©todo de mediciÃ³n |
+| Métrica | Objetivo | Método de medición |
 |---|---:|---|
-| NPS | â‰¥40 | Encuesta final con escala de 0 a 10 |
-| SatisfacciÃ³n por mÃ³dulo | â‰¥4.0/5 | Encuesta por mÃ³dulo |
-| Completitud de tareas | â‰¥80% | Registro de tareas completadas |
-| Incidencias crÃ­ticas | â‰¤5 | Registro de incidencias |
-| Solicitudes de mejora | Sin lÃ­mite | Lista priorizada de sugerencias |
+| NPS | ≥40 | Encuesta final con escala de 0 a 10 |
+| Satisfacción por módulo | ≥4.0/5 | Encuesta por módulo |
+| Completitud de tareas | ≥80% | Registro de tareas completadas |
+| Incidencias críticas | ≤5 | Registro de incidencias |
+| Solicitudes de mejora | Sin límite | Lista priorizada de sugerencias |
 
 ### 6.4 Pregunta NPS
 
-La pregunta se realizarÃ¡ Ãºnicamente a participantes reales al finalizar la
+La pregunta se realizará únicamente a participantes reales al finalizar la
 prueba:
 
-> En una escala de 0 a 10, Â¿quÃ© tan probable es que recomiendes
+> En una escala de 0 a 10, ¿qué tan probable es que recomiendes
 > Cardio-Wellness a un colega?
 
-| ClasificaciÃ³n | PuntuaciÃ³n |
+| Clasificación | Puntuación |
 |---|---:|
 | Promotores | 9 a 10 |
 | Neutros | 7 a 8 |
 | Detractores | 0 a 6 |
 
-El NPS se calcularÃ¡ mediante:
+El NPS se calculará mediante:
 
 \[
 \text{NPS} =
@@ -240,70 +240,70 @@ El NPS se calcularÃ¡ mediante:
 \% \text{ de detractores}
 \]
 
-Los participantes neutros no se incluyen directamente en el cÃ¡lculo.
+Los participantes neutros no se incluyen directamente en el cálculo.
 
 ---
 
 ## 7. Fase posterior
 
 Si el sistema se utiliza en un contexto real, se recomienda realizar
-seguimiento periÃ³dico de las siguientes mÃ©tricas:
+seguimiento periódico de las siguientes métricas:
 
-| MÃ©trica | Frecuencia | Fuente |
+| Métrica | Frecuencia | Fuente |
 |---|---|---|
 | Incidencias de soporte | Semanal | Registro de soporte |
 | Frecuencia de uso | Semanal | Logs y reportes de actividad |
 | Usuarios activos | Mensual | Reporte de usuarios |
-| RetenciÃ³n | Mensual | Reporte de actividad |
+| Retención | Mensual | Reporte de actividad |
 | Feedback cualitativo | Continuo | Encuestas y entrevistas |
 | Solicitudes de mejora | Continuo | Registro de mejoras |
 
 ---
 
-## 8. Criterios de aceptaciÃ³n
+## 8. Criterios de aceptación
 
-El sistema podrÃ¡ considerarse usable para el alcance evaluado cuando, despuÃ©s
+El sistema podrá considerarse usable para el alcance evaluado cuando, después
 de ejecutar pruebas con participantes reales, se cumplan los siguientes
 criterios:
 
 | Criterio | Meta |
 |---|---:|
-| Completitud de tareas crÃ­ticas sin asistencia | â‰¥80% |
+| Completitud de tareas críticas sin asistencia | ≥80% |
 | Tiempo promedio por tarea | <2 minutos |
-| SatisfacciÃ³n general | â‰¥4.0/5 |
-| NPS en Fase Beta | â‰¥40 |
-| Defectos crÃ­ticos en Fase Beta | â‰¤5 |
+| Satisfacción general | ≥4.0/5 |
+| NPS en Fase Beta | ≥40 |
+| Defectos críticos en Fase Beta | ≤5 |
 
-El cumplimiento de estos criterios deberÃ¡ sustentarse con registros de sesiones,
+El cumplimiento de estos criterios deberá sustentarse con registros de sesiones,
 encuestas y resultados consolidados.
 
 ---
 
-## 9. Protocolo de ejecuciÃ³n
+## 9. Protocolo de ejecución
 
-### 9.1 PreparaciÃ³n
+### 9.1 Preparación
 
-1. Preparar la aplicaciÃ³n y la base de datos temporal.
+1. Preparar la aplicación y la base de datos temporal.
 2. Crear cuentas, clientes, rutinas y sesiones ficticias.
-3. Verificar que los flujos a evaluar estÃ©n disponibles.
+3. Verificar que los flujos a evaluar estén disponibles.
 4. Preparar la plantilla de registro.
 5. Solicitar consentimiento para registrar tiempos, observaciones y comentarios.
-6. Informar que se evalÃºa el sistema, no el desempeÃ±o de la persona.
+6. Informar que se evalúa el sistema, no el desempeño de la persona.
 
-### 9.2 SesiÃ³n por participante
+### 9.2 Sesión por participante
 
 1. Realizar un briefing inicial de aproximadamente 5 minutos.
 2. Presentar cada tarea como escenario, sin explicar botones o rutas de
-   navegaciÃ³n.
-3. Observar la ejecuciÃ³n sin intervenir, salvo ante un bloqueo crÃ­tico.
+   navegación.
+3. Observar la ejecución sin intervenir, salvo ante un bloqueo crítico.
 4. Registrar tiempo, errores, solicitudes de ayuda y comentarios.
 5. Aplicar la encuesta posterior.
 6. Agradecer al participante y proteger su identidad en el reporte.
 
-### 9.3 AnÃ¡lisis
+### 9.3 Análisis
 
 1. Consolidar los registros de todos los participantes.
-2. Calcular completitud, tiempos, errores y satisfacciÃ³n.
+2. Calcular completitud, tiempos, errores y satisfacción.
 3. Clasificar los hallazgos por severidad.
 4. Identificar problemas recurrentes.
 5. Proponer acciones de mejora.
@@ -313,7 +313,7 @@ encuestas y resultados consolidados.
 
 ## 10. Plantilla de registro
 
-### IdentificaciÃ³n anÃ³nima
+### Identificación anónima
 
 **Participante:** P_____
 **Fecha:** __________________
@@ -324,18 +324,18 @@ encuestas y resultados consolidados.
 
 | Tarea | Completada sin asistencia | Tiempo en segundos | Errores | Ayuda solicitada | Comentarios |
 |---|---|---:|---:|---:|---|
-| Registrar cliente | SÃ­ / No | | | | |
-| Asignar rutina | SÃ­ / No | | | | |
-| Registrar sesiÃ³n | SÃ­ / No | | | | |
-| Consultar progreso | SÃ­ / No | | | | |
+| Registrar cliente | Sí / No | | | | |
+| Asignar rutina | Sí / No | | | | |
+| Registrar sesión | Sí / No | | | | |
+| Consultar progreso | Sí / No | | | | |
 
 ### Encuesta posterior
 
 | Pregunta | Respuesta |
 |---|---|
 | Facilidad general de uso, de 1 a 5 | |
-| MÃ³dulo mÃ¡s claro o Ãºtil | |
-| Parte mÃ¡s confusa o difÃ­cil | |
+| Módulo más claro o útil | |
+| Parte más confusa o difícil | |
 | Mejora prioritaria sugerida | |
 | Probabilidad de recomendar el sistema, de 0 a 10 | |
 
@@ -355,43 +355,43 @@ ______________________________________________________________________________
 
 | Semana | Actividad |
 |---|---|
-| 1 | PreparaciÃ³n de cuentas ficticias, consentimiento y material de prueba |
-| 2 | EjecuciÃ³n de Fase Alpha con 3 a 5 participantes |
-| 3 | AnÃ¡lisis de hallazgos Alpha y aplicaciÃ³n de mejoras prioritarias |
+| 1 | Preparación de cuentas ficticias, consentimiento y material de prueba |
+| 2 | Ejecución de Fase Alpha con 3 a 5 participantes |
+| 3 | Análisis de hallazgos Alpha y aplicación de mejoras prioritarias |
 | 4 a 7 | Fase Beta con 10 a 15 participantes |
-| 8 | ConsolidaciÃ³n de mÃ©tricas, hallazgos y recomendaciones |
-| Posterior | Seguimiento periÃ³dico de uso, soporte y feedback |
+| 8 | Consolidación de métricas, hallazgos y recomendaciones |
+| Posterior | Seguimiento periódico de uso, soporte y feedback |
 
 ---
 
 ## 12. Estado actual y limitaciones
 
-- Las pruebas de usabilidad con participantes reales estÃ¡n pendientes de
-  ejecuciÃ³n.
-- Este documento describe el protocolo que se utilizarÃ¡ cuando se realicen las
+- Las pruebas de usabilidad con participantes reales están pendientes de
+  ejecución.
+- Este documento describe el protocolo que se utilizará cuando se realicen las
   sesiones.
-- La simulaciÃ³n automatizada de flujos con 100 cuentas es una prueba tÃ©cnica y
-  no equivale a una evaluaciÃ³n de usabilidad humana.
-- Los indicadores de satisfacciÃ³n, NPS, tiempos observados y completitud real
+- La simulación automatizada de flujos con 100 cuentas es una prueba técnica y
+  no equivale a una evaluación de usabilidad humana.
+- Los indicadores de satisfacción, NPS, tiempos observados y completitud real
   no deben declararse hasta contar con registros de participantes.
-- Los resultados futuros se documentarÃ¡n en
+- Los resultados futuros se documentarán en
   [`RESULTADOS_PRUEBAS_USABILIDAD.md`](RESULTADOS_PRUEBAS_USABILIDAD.md).
 
 ---
 
-## 13. Evidencia tÃ©cnica relacionada
+## 13. Evidencia técnica relacionada
 
-La validaciÃ³n tÃ©cnica automatizada del proyecto se documenta por separado y no
+La validación técnica automatizada del proyecto se documenta por separado y no
 sustituye esta prueba de usabilidad:
 
 | Evidencia | Resultado |
 |---|---|
 | Suite automatizada | 2,690 pruebas aprobadas, 0 fallos y 0 errores |
 | Reporte JUnit | `docs/resultado_suite_actual.xml` |
-| Stress PostgreSQL | 30 usuarios concurrentes, 10,792 operaciones y 100% de Ã©xito |
-| SimulaciÃ³n de flujos | 100 cuentas automatizadas; 93.6% de Ã©xito |
+| Stress PostgreSQL | 30 usuarios concurrentes, 10,792 operaciones y 100% de éxito |
+| Simulación de flujos | 100 cuentas automatizadas; 93.6% de éxito |
 | Prueba con personas reales | Pendiente |
 
-La evidencia tÃ©cnica confirma comportamiento automatizado del sistema, mientras
-que la evaluaciÃ³n de usabilidad debe obtenerse directamente de participantes
+La evidencia técnica confirma comportamiento automatizado del sistema, mientras
+que la evaluación de usabilidad debe obtenerse directamente de participantes
 representativos.
